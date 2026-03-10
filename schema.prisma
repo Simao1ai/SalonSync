@@ -1,0 +1,421 @@
+// SalonSync - Prisma Schema
+// Database: PostgreSQL via Supabase
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  STAFF
+  CLIENT
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PaymentStatus {
+  UNPAID
+  DEPOSIT_PAID
+  FULLY_PAID
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum ServiceCategory {
+  STANDARD
+  HIGH_VALUE
+}
+
+enum GiftCardStatus {
+  ACTIVE
+  REDEEMED
+  EXPIRED
+}
+
+// ─────────────────────────────────────────────
+// LOCATION (Multi-location support)
+// ─────────────────────────────────────────────
+
+model Location {
+  id              String   @id @default(cuid())
+  name            String
+  address         String
+  city            String
+  state           String
+  zip             String
+  phone           String?
+  email           String?
+  timezone        String   @default("America/New_York")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Cancellation policy config
+  cancellationWindowHours Int     @default(48)
+  standardCancelFeePercent Float  @default(50)
+  highValueCancelFeePercent Float @default(100)
+
+  // Pricing
+  basePlatformFee Float @default(20)
+  perSeatFee      Float @default(10)
+
+  users        User[]
+  appointments Appointment[]
+  services     Service[]
+  analytics    Analytics[]
+
+  @@map("locations")
+}
+
+// ─────────────────────────────────────────────
+// USER (Admin, Staff, Client)
+// ─────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  phone          String?
+  role           Role     @default(CLIENT)
+  avatarUrl      String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Supabase Auth ID
+  authId         String?  @unique
+
+  // Stripe customer ID (for clients)
+  stripeCustomerId String?
+
+  // Location association (staff/admin belong to a location)
+  locationId     String?
+  location       Location? @relation(fields: [locationId], references: [id])
+
+  // Staff-specific
+  bio            String?
+  specialties    String[]
+  calendarSyncToken String?
+
+  // Relations
+  staffAppointments  Appointment[] @relation("StaffAppointments")
+  clientAppointments Appointment[] @relation("ClientAppointments")
+  reviews            Review[]
+  receivedReviews    Review[]      @relation("StaffReviews")
+  availability       Availability[]
+  notifications      Notification[]
+  giftCards          GiftCard[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// SERVICE
+// ─────────────────────────────────────────────
+
+model Service {
+  id               String          @id @default(cuid())
+  name             String
+  description      String?
+  category         ServiceCategory @default(STANDARD)
+  basePrice        Float
+  durationMinutes  Int
+  depositPercent   Float           @default(0)
+  requiresFullPrepay Boolean       @default(false)
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  locationId       String
+  location         Location        @relation(fields: [locationId], references: [id])
+
+  appointments     AppointmentService[]
+  productRecs      ProductRecommendation[]
+
+  @@map("services")
+}
+
+// ─────────────────────────────────────────────
+// APPOINTMENT
+// ─────────────────────────────────────────────
+
+model Appointment {
+  id              String            @id @default(cuid())
+  startTime       DateTime
+  endTime         DateTime
+  status          AppointmentStatus @default(PENDING)
+  notes           String?
+  isHighValue     Boolean           @default(false)
+
+  // Risk scoring (AI feature)
+  riskScore       RiskLevel         @default(LOW)
+  riskFactors     String[]
+
+  // Payment
+  totalPrice      Float
+  depositAmount   Float             @default(0)
+  paymentStatus   PaymentStatus     @default(UNPAID)
+  stripePaymentId String?
+  cancelFeeCharged Float?
+
+  // Cancellation
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  cancelReason    String?
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  locationId      String
+  location        Location          @relation(fields: [locationId], references: [id])
+
+  staffId         String
+  staff           User              @relation("StaffAppointments", fields: [staffId], references: [id])
+
+  clientId        String
+  client          User              @relation("ClientAppointments", fields: [clientId], references: [id])
+
+  services        AppointmentService[]
+  review          Review?
+  payments        Payment[]
+  reminders       Reminder[]
+
+  @@map("appointments")
+}
+
+// ─────────────────────────────────────────────
+// APPOINTMENT <> SERVICE (join table)
+// ─────────────────────────────────────────────
+
+model AppointmentService {
+  id            String      @id @default(cuid())
+  price         Float
+  durationMinutes Int
+
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+
+  serviceId     String
+  service       Service     @relation(fields: [serviceId], references: [id])
+
+  @@map("appointment_services")
+}
+
+// ─────────────────────────────────────────────
+// PAYMENT
+// ─────────────────────────────────────────────
+
+model Payment {
+  id              String   @id @default(cuid())
+  amount          Float
+  type            String   // deposit, full_payment, cancellation_fee, refund
+  stripeId        String?
+  status          String   @default("pending")
+  createdAt       DateTime @default(now())
+
+  appointmentId   String
+  appointment     Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@map("payments")
+}
+
+// ─────────────────────────────────────────────
+// REVIEW & RATING
+// ─────────────────────────────────────────────
+
+model Review {
+  id              String   @id @default(cuid())
+  rating          Int      // 1-5
+  comment         String?
+
+  // AI sentiment analysis results
+  sentimentScore  Float?
+  sentimentTags   String[] // e.g. ["punctuality", "color_quality", "communication"]
+
+  isPublished     Boolean  @default(false)
+  isFlagged       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  appointmentId   String   @unique
+  appointment     Appointment @relation(fields: [appointmentId], references: [id])
+
+  clientId        String
+  client          User     @relation(fields: [clientId], references: [id])
+
+  staffId         String
+  staff           User     @relation("StaffReviews", fields: [staffId], references: [id])
+
+  @@map("reviews")
+}
+
+// ─────────────────────────────────────────────
+// AVAILABILITY (Staff schedules & blocks)
+// ─────────────────────────────────────────────
+
+model Availability {
+  id          String   @id @default(cuid())
+  dayOfWeek   Int?     // 0=Sun, 6=Sat (null if a specific date block)
+  startTime   String?  // "09:00"
+  endTime     String?  // "17:00"
+  isBlocked   Boolean  @default(false)
+  blockDate   DateTime?
+  note        String?
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("availability")
+}
+
+// ─────────────────────────────────────────────
+// GIFT CARDS
+// ─────────────────────────────────────────────
+
+model GiftCard {
+  id           String        @id @default(cuid())
+  code         String        @unique
+  initialValue Float
+  balance      Float
+  status       GiftCardStatus @default(ACTIVE)
+  expiresAt    DateTime?
+  createdAt    DateTime      @default(now())
+
+  purchasedById String
+  purchasedBy   User         @relation(fields: [purchasedById], references: [id])
+
+  @@map("gift_cards")
+}
+
+// ─────────────────────────────────────────────
+// SERVICE PACKAGES
+// ─────────────────────────────────────────────
+
+model ServicePackage {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  price         Float
+  serviceIds    String[] // array of service IDs included
+  sessionsTotal Int      @default(1)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@map("service_packages")
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // reminder, cancellation, review_request, rebook_nudge, etc.
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────
+// REMINDERS (Scheduled appointment reminders)
+// ─────────────────────────────────────────────
+
+model Reminder {
+  id            String   @id @default(cuid())
+  type          String   // "48hr", "24hr", "high_risk_extra"
+  scheduledFor  DateTime
+  sentAt        DateTime?
+  channel       String   // "email" | "sms"
+  createdAt     DateTime @default(now())
+
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@map("reminders")
+}
+
+// ─────────────────────────────────────────────
+// PRODUCT RECOMMENDATIONS (AI feature)
+// ─────────────────────────────────────────────
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  inStock     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  recommendations ProductRecommendation[]
+
+  @@map("products")
+}
+
+model ProductRecommendation {
+  id          String   @id @default(cuid())
+  reason      String?  // AI-generated reason
+  converted   Boolean  @default(false) // did stylist sell it?
+  createdAt   DateTime @default(now())
+
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id])
+
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+
+  @@map("product_recommendations")
+}
+
+// ─────────────────────────────────────────────
+// ANALYTICS SNAPSHOTS (Daily aggregates)
+// ─────────────────────────────────────────────
+
+model Analytics {
+  id                   String   @id @default(cuid())
+  date                 DateTime
+  totalRevenue         Float    @default(0)
+  totalAppointments    Int      @default(0)
+  cancelledCount       Int      @default(0)
+  noShowCount          Int      @default(0)
+  newClients           Int      @default(0)
+  returningClients     Int      @default(0)
+  cancelFeeRevenue     Float    @default(0)
+  avgAppointmentValue  Float    @default(0)
+  createdAt            DateTime @default(now())
+
+  locationId           String
+  location             Location @relation(fields: [locationId], references: [id])
+
+  @@unique([date, locationId])
+  @@map("analytics")
+}
