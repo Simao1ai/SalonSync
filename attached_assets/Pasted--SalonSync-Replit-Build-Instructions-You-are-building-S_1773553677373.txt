@@ -1,0 +1,841 @@
+# SalonSync — Replit Build Instructions
+
+You are building **SalonSync**, a production-grade AI-powered SaaS platform for hair salons. Read this entire file before writing a single line of code. Follow every instruction exactly.
+
+-----
+
+## What You Are Building
+
+A multi-tenant SaaS web application for hair salons with three user roles (Admin, Staff, Client), AI-powered features, appointment scheduling, Stripe payments, and cancellation fee enforcement.
+
+**This is a real product. Build it to production quality — not a demo.**
+
+-----
+
+## Tech Stack — Use Exactly This
+
+|Layer    |Technology                                 |
+|---------|-------------------------------------------|
+|Framework|Next.js 14 (App Router)                    |
+|Language |TypeScript (strict mode — zero `any` types)|
+|Styling  |Tailwind CSS                               |
+|Database |PostgreSQL via Supabase                    |
+|ORM      |Prisma v5                                  |
+|Auth     |Supabase Auth (@supabase/ssr)              |
+|Payments |Stripe                                     |
+|AI       |Anthropic Claude API (@anthropic-ai/sdk)   |
+|Email    |Resend                                     |
+|Icons    |Lucide React                               |
+
+-----
+
+## Design Direction — CRITICAL
+
+SalonSync must look like a **premium, modern SaaS product**. Think Linear, Vercel dashboard, or Stripe’s UI — clean, confident, and professional.
+
+**Visual Identity:**
+
+- **Color palette:** Deep slate/charcoal base (`#0F172A`) with a warm rose-gold accent (`#C9956A`) for a luxury salon feel
+- **Typography:** Use `Playfair Display` for headings (elegant, salon-appropriate) and `DM Sans` for body text (modern, readable)
+- **Style:** Refined minimalism — generous white space, subtle shadows, smooth transitions
+- **Components:** Rounded cards with subtle borders, clean data tables, smooth modals
+- **Avoid:** Purple gradients, generic blue buttons, clipart icons, generic AI aesthetics
+
+**Import these fonts in layout.tsx:**
+
+```
+Playfair Display (weights: 400, 600, 700)
+DM Sans (weights: 400, 500, 600)
+```
+
+-----
+
+## Environment Variables Required
+
+Create a `.env.local` file with:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+DATABASE_URL=
+STRIPE_SECRET_KEY=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+ANTHROPIC_API_KEY=
+RESEND_API_KEY=
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+-----
+
+## Database Schema
+
+Create `prisma/schema.prisma` with exactly these models:
+
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  CLIENT
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PaymentStatus {
+  UNPAID
+  DEPOSIT_PAID
+  FULLY_PAID
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum ServiceCategory {
+  STANDARD
+  HIGH_VALUE
+}
+
+enum GiftCardStatus {
+  ACTIVE
+  REDEEMED
+  EXPIRED
+}
+
+model Location {
+  id                        String        @id @default(cuid())
+  name                      String
+  address                   String
+  city                      String
+  state                     String
+  zip                       String
+  phone                     String?
+  email                     String?
+  timezone                  String        @default("America/New_York")
+  isActive                  Boolean       @default(true)
+  cancellationWindowHours   Int           @default(48)
+  standardCancelFeePercent  Float         @default(50)
+  highValueCancelFeePercent Float         @default(100)
+  basePlatformFee           Float         @default(20)
+  perSeatFee                Float         @default(10)
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+  users                     User[]
+  appointments              Appointment[]
+  services                  Service[]
+  analytics                 Analytics[]
+  @@map("locations")
+}
+
+model User {
+  id                 String        @id @default(cuid())
+  email              String        @unique
+  name               String
+  phone              String?
+  role               Role          @default(CLIENT)
+  avatarUrl          String?
+  isActive           Boolean       @default(true)
+  authId             String?       @unique
+  stripeCustomerId   String?
+  locationId         String?
+  bio                String?
+  specialties        String[]
+  calendarSyncToken  String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  location           Location?     @relation(fields: [locationId], references: [id])
+  staffAppointments  Appointment[] @relation("StaffAppointments")
+  clientAppointments Appointment[] @relation("ClientAppointments")
+  reviews            Review[]
+  receivedReviews    Review[]      @relation("StaffReviews")
+  availability       Availability[]
+  notifications      Notification[]
+  giftCards          GiftCard[]
+  @@map("users")
+}
+
+model Service {
+  id                 String               @id @default(cuid())
+  name               String
+  description        String?
+  category           ServiceCategory      @default(STANDARD)
+  basePrice          Float
+  durationMinutes    Int
+  depositPercent     Float                @default(0)
+  requiresFullPrepay Boolean              @default(false)
+  isActive           Boolean              @default(true)
+  locationId         String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  location           Location             @relation(fields: [locationId], references: [id])
+  appointments       AppointmentService[]
+  productRecs        ProductRecommendation[]
+  @@map("services")
+}
+
+model Appointment {
+  id               String               @id @default(cuid())
+  startTime        DateTime
+  endTime          DateTime
+  status           AppointmentStatus    @default(PENDING)
+  notes            String?
+  isHighValue      Boolean              @default(false)
+  riskScore        RiskLevel            @default(LOW)
+  riskFactors      String[]
+  totalPrice       Float
+  depositAmount    Float                @default(0)
+  paymentStatus    PaymentStatus        @default(UNPAID)
+  stripePaymentId  String?
+  cancelFeeCharged Float?
+  cancelledAt      DateTime?
+  cancelledBy      String?
+  cancelReason     String?
+  locationId       String
+  staffId          String
+  clientId         String
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  location         Location             @relation(fields: [locationId], references: [id])
+  staff            User                 @relation("StaffAppointments", fields: [staffId], references: [id])
+  client           User                 @relation("ClientAppointments", fields: [clientId], references: [id])
+  services         AppointmentService[]
+  review           Review?
+  payments         Payment[]
+  reminders        Reminder[]
+  @@map("appointments")
+}
+
+model AppointmentService {
+  id              String      @id @default(cuid())
+  price           Float
+  durationMinutes Int
+  appointmentId   String
+  serviceId       String
+  appointment     Appointment @relation(fields: [appointmentId], references: [id])
+  service         Service     @relation(fields: [serviceId], references: [id])
+  @@map("appointment_services")
+}
+
+model Payment {
+  id            String      @id @default(cuid())
+  amount        Float
+  type          String
+  stripeId      String?
+  status        String      @default("pending")
+  appointmentId String
+  createdAt     DateTime    @default(now())
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  @@map("payments")
+}
+
+model Review {
+  id             String      @id @default(cuid())
+  rating         Int
+  comment        String?
+  sentimentScore Float?
+  sentimentTags  String[]
+  isPublished    Boolean     @default(false)
+  isFlagged      Boolean     @default(false)
+  appointmentId  String      @unique
+  clientId       String
+  staffId        String
+  createdAt      DateTime    @default(now())
+  appointment    Appointment @relation(fields: [appointmentId], references: [id])
+  client         User        @relation(fields: [clientId], references: [id])
+  staff          User        @relation("StaffReviews", fields: [staffId], references: [id])
+  @@map("reviews")
+}
+
+model Availability {
+  id          String    @id @default(cuid())
+  dayOfWeek   Int?
+  startTime   String?
+  endTime     String?
+  isBlocked   Boolean   @default(false)
+  blockDate   DateTime?
+  note        String?
+  userId      String
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  @@map("availability")
+}
+
+model GiftCard {
+  id            String         @id @default(cuid())
+  code          String         @unique
+  initialValue  Float
+  balance       Float
+  status        GiftCardStatus @default(ACTIVE)
+  expiresAt     DateTime?
+  purchasedById String
+  createdAt     DateTime       @default(now())
+  purchasedBy   User           @relation(fields: [purchasedById], references: [id])
+  @@map("gift_cards")
+}
+
+model ServicePackage {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  price         Float
+  serviceIds    String[]
+  sessionsTotal Int      @default(1)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  @@map("service_packages")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  type      String
+  title     String
+  message   String
+  isRead    Boolean   @default(false)
+  sentAt    DateTime?
+  userId    String
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+  @@map("notifications")
+}
+
+model Reminder {
+  id            String      @id @default(cuid())
+  type          String
+  scheduledFor  DateTime
+  sentAt        DateTime?
+  channel       String
+  appointmentId String
+  createdAt     DateTime    @default(now())
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  @@map("reminders")
+}
+
+model Product {
+  id              String                  @id @default(cuid())
+  name            String
+  description     String?
+  price           Float
+  imageUrl        String?
+  inStock         Boolean                 @default(true)
+  createdAt       DateTime                @default(now())
+  recommendations ProductRecommendation[]
+  @@map("products")
+}
+
+model ProductRecommendation {
+  id        String   @id @default(cuid())
+  reason    String?
+  converted Boolean  @default(false)
+  serviceId String
+  productId String
+  createdAt DateTime @default(now())
+  service   Service  @relation(fields: [serviceId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+  @@map("product_recommendations")
+}
+
+model Analytics {
+  id                   String   @id @default(cuid())
+  date                 DateTime
+  totalRevenue         Float    @default(0)
+  totalAppointments    Int      @default(0)
+  cancelledCount       Int      @default(0)
+  noShowCount          Int      @default(0)
+  newClients           Int      @default(0)
+  returningClients     Int      @default(0)
+  cancelFeeRevenue     Float    @default(0)
+  avgAppointmentValue  Float    @default(0)
+  locationId           String
+  createdAt            DateTime @default(now())
+  location             Location @relation(fields: [locationId], references: [id])
+  @@unique([date, locationId])
+  @@map("analytics")
+}
+```
+
+-----
+
+## Complete File Structure to Build
+
+Build every file listed below. Do not skip any.
+
+```
+salonsync/
+├── prisma/
+│   └── schema.prisma
+├── src/
+│   ├── app/
+│   │   ├── (auth)/
+│   │   │   ├── layout.tsx
+│   │   │   ├── actions.ts
+│   │   │   ├── login/
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── login-form.tsx
+│   │   │   └── register/
+│   │   │       ├── page.tsx
+│   │   │       └── register-form.tsx
+│   │   ├── (dashboard)/
+│   │   │   ├── layout.tsx
+│   │   │   ├── logout-button.tsx
+│   │   │   ├── admin/
+│   │   │   │   └── dashboard/
+│   │   │   │       └── page.tsx
+│   │   │   ├── staff/
+│   │   │   │   └── dashboard/
+│   │   │   │       └── page.tsx
+│   │   │   └── client/
+│   │   │       └── dashboard/
+│   │   │           └── page.tsx
+│   │   ├── api/
+│   │   │   ├── appointments/
+│   │   │   │   └── route.ts
+│   │   │   ├── services/
+│   │   │   │   └── route.ts
+│   │   │   ├── staff/
+│   │   │   │   └── route.ts
+│   │   │   ├── ai/
+│   │   │   │   └── chat/
+│   │   │   │       └── route.ts
+│   │   │   └── webhooks/
+│   │   │       └── stripe/
+│   │   │           └── route.ts
+│   │   ├── auth/
+│   │   │   └── callback/
+│   │   │       └── route.ts
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── components/
+│   │   ├── ui/
+│   │   │   ├── button.tsx
+│   │   │   ├── card.tsx
+│   │   │   ├── badge.tsx
+│   │   │   ├── input.tsx
+│   │   │   └── modal.tsx
+│   │   ├── calendar/
+│   │   │   └── appointment-calendar.tsx
+│   │   ├── booking/
+│   │   │   ├── booking-form.tsx
+│   │   │   └── service-selector.tsx
+│   │   └── dashboard/
+│   │       ├── stats-card.tsx
+│   │       ├── recent-appointments.tsx
+│   │       └── risk-badge.tsx
+│   ├── lib/
+│   │   ├── supabase/
+│   │   │   ├── client.ts
+│   │   │   ├── server.ts
+│   │   │   ├── admin.ts
+│   │   │   └── middleware.ts
+│   │   ├── prisma.ts
+│   │   ├── stripe.ts
+│   │   └── claude.ts
+│   ├── types/
+│   │   └── index.ts
+│   └── middleware.ts
+├── .env.example
+├── .gitignore
+├── CLAUDE.md
+└── package.json
+```
+
+-----
+
+## Page-by-Page Build Instructions
+
+### Auth Pages (`/login`, `/register`)
+
+**Design:** Centered card on a deep slate background (`#0F172A`). The SalonSync logo/wordmark at the top in Playfair Display. Clean white card with subtle shadow. Rose-gold accent on the primary button.
+
+**Login page must have:**
+
+- Email + password fields with floating labels
+- “Sign in” button (rose-gold: `#C9956A`)
+- Link to register
+- Error message display in red
+- Loading state on button while submitting
+
+**Register page must have:**
+
+- Full name, email, password fields
+- Password strength indicator
+- “Create account” button
+- Link back to login
+- Success message: “Check your email to confirm your account”
+
+-----
+
+### Admin Dashboard (`/admin/dashboard`)
+
+**Design:** Left sidebar (dark slate `#0F172A`) + main content area (light gray `#F8FAFC`).
+
+**Sidebar contains:**
+
+- SalonSync logo at top
+- Navigation links: Dashboard, Appointments, Staff, Clients, Services, Analytics, Settings
+- Active state: rose-gold left border + light background
+- User name + role badge at bottom + logout button
+
+**Main dashboard shows 6 stat cards:**
+
+1. Today’s Revenue (`$`)
+1. Appointments Today (count)
+1. Cancellation Rate (%)
+1. Active Staff (count)
+1. New Clients This Month (count)
+1. Cancellation Fee Revenue (`$`)
+
+**Below stats:**
+
+- Recent appointments table (client name, service, stylist, time, status badge, risk badge)
+- Quick actions: “Add Appointment”, “Add Staff Member”, “Add Service”
+
+-----
+
+### Staff Dashboard (`/staff/dashboard`)
+
+**Design:** Same sidebar layout. Lighter, simpler content.
+
+**Shows:**
+
+- Today’s schedule (time-blocked list of appointments)
+- Upcoming appointments this week
+- Personal stats: avg rating, appointments this month, repeat client %
+- Any high-risk appointments highlighted in amber
+
+-----
+
+### Client Dashboard (`/client/dashboard`)
+
+**Design:** Cleaner, more consumer-facing feel. Less data-dense.
+
+**Shows:**
+
+- “Book an Appointment” prominent CTA button (rose-gold)
+- Upcoming appointments card
+- Past appointments with “Rebook” button on each
+- Gift card balance if applicable
+- AI chatbot button (bottom right, floating)
+
+-----
+
+### Booking Flow (`/client/book`)
+
+Build a multi-step booking form:
+
+**Step 1 — Select Service:**
+
+- Grid of service cards (name, price, duration, category badge)
+- HIGH_VALUE services show a “Deposit Required” badge in amber
+- Search/filter by category
+
+**Step 2 — Select Stylist:**
+
+- Show only stylists available for selected service
+- Stylist cards: photo placeholder, name, specialties, star rating
+- “Any available stylist” option
+
+**Step 3 — Select Date & Time:**
+
+- Calendar component showing available dates
+- Time slot grid for selected date
+- Unavailable slots greyed out
+
+**Step 4 — Confirm & Pay:**
+
+- Appointment summary
+- Cancellation policy text (must be acknowledged with checkbox)
+- For HIGH_VALUE services: Stripe payment element for deposit/full payment
+- For STANDARD services: card on file option
+- “Confirm Booking” button
+
+-----
+
+## Business Logic to Implement
+
+### Cancellation Fee Enforcement
+
+```typescript
+// In /api/appointments/[id]/cancel/route.ts
+// 1. Get appointment and location's cancellationWindowHours
+// 2. Calculate hours until appointment
+// 3. If hoursUntil < cancellationWindowHours:
+//    - isHighValue ? charge 100% : charge standardCancelFeePercent%
+//    - Call stripe.chargeCancellationFee()
+//    - Update appointment status to CANCELLED
+//    - Update cancelFeeCharged field
+// 4. If hoursUntil >= cancellationWindowHours:
+//    - Full refund via stripe.issueRefund()
+//    - Update appointment status to CANCELLED
+```
+
+### High-Value Appointment Detection
+
+```typescript
+// When creating appointment:
+// If any service in the booking has category === 'HIGH_VALUE':
+//   - Set appointment.isHighValue = true
+//   - Require deposit or full payment via Stripe
+//   - Trigger AI risk scoring
+```
+
+### AI Risk Scoring
+
+```typescript
+// After appointment is created, call:
+// scoreCancellationRisk() from src/lib/claude.ts
+// Update appointment.riskScore and appointment.riskFactors
+// If riskScore === 'HIGH': create extra reminder
+```
+
+-----
+
+## AI Features to Build
+
+### 1. AI Receptionist Chatbot
+
+- Floating chat button on client portal (bottom right)
+- Opens a chat modal
+- POST to `/api/ai/chat` which calls `chatWithReceptionist()` from `src/lib/claude.ts`
+- Show typing indicator while waiting
+- Support conversation history (send full message array each time)
+
+### 2. Cancellation Risk Scoring
+
+- Called automatically when new appointment is created
+- Risk badge shown on appointment in admin/staff view:
+  - LOW = green badge
+  - MEDIUM = amber badge
+  - HIGH = red badge with warning icon
+
+### 3. Review Sentiment Analysis
+
+- After appointment marked COMPLETED, send review request email
+- Client submits 1-5 star rating + optional comment
+- On submission, call `analyzeReviewSentiment()` from `src/lib/claude.ts`
+- Store sentimentScore and sentimentTags on Review record
+
+-----
+
+## Key Components to Build
+
+### `src/components/ui/button.tsx`
+
+```typescript
+// Variants: primary (rose-gold), secondary (outline), ghost, danger
+// Sizes: sm, md, lg
+// States: loading (spinner), disabled
+```
+
+### `src/components/ui/badge.tsx`
+
+```typescript
+// Variants: green (CONFIRMED/LOW), amber (PENDING/MEDIUM/HIGH_VALUE), 
+//           red (CANCELLED/HIGH), blue (STAFF), purple (ADMIN)
+```
+
+### `src/components/dashboard/risk-badge.tsx`
+
+```typescript
+// Shows LOW/MEDIUM/HIGH with color and icon
+// Tooltip showing riskFactors array
+```
+
+### `src/components/calendar/appointment-calendar.tsx`
+
+```typescript
+// Month/week/day view toggle
+// Color coded by status
+// Click appointment to see details modal
+// Admin sees ALL staff appointments side by side
+// Staff sees only their own
+```
+
+-----
+
+## API Routes to Build
+
+### `POST /api/appointments`
+
+- Validate all fields
+- Check stylist availability (no overlapping appointments)
+- Calculate total price from services
+- Detect if HIGH_VALUE
+- Create Appointment + AppointmentService records
+- Trigger AI risk scoring (async, don’t block response)
+- Schedule reminders (48hr and 24hr)
+- Return created appointment
+
+### `PATCH /api/appointments/[id]/cancel`
+
+- Enforce cancellation policy
+- Charge or refund via Stripe
+- Update appointment status
+- Send cancellation confirmation email via Resend
+
+### `GET /api/appointments`
+
+- Admin: all appointments for their location(s)
+- Staff: only their own appointments
+- Client: only their own appointments
+- Support query params: `?date=`, `?status=`, `?staffId=`
+
+### `POST /api/ai/chat`
+
+- Accept `{ messages, locationId }` body
+- Fetch location’s services for context
+- Call `chatWithReceptionist()` from claude.ts
+- Return AI response
+
+### `POST /api/webhooks/stripe`
+
+- Handle `payment_intent.succeeded`
+- Handle `payment_intent.payment_failed`
+- Update PaymentStatus on Appointment accordingly
+
+-----
+
+## Styling Rules
+
+- Use Tailwind CSS utility classes only
+- Primary button: `bg-[#C9956A] hover:bg-[#B8845A] text-white`
+- Sidebar background: `bg-[#0F172A]`
+- Active nav item: `border-l-2 border-[#C9956A] bg-white/5`
+- Card: `bg-white rounded-xl shadow-sm border border-gray-100`
+- Heading font: `font-playfair` (configure in tailwind.config)
+- Body font: `font-dm-sans` (configure in tailwind.config)
+- Status badges use semantic colors (green/amber/red/blue)
+- Smooth transitions: `transition-all duration-200`
+
+-----
+
+## Tailwind Config
+
+Add custom fonts to `tailwind.config.ts`:
+
+```typescript
+theme: {
+  extend: {
+    fontFamily: {
+      playfair: ['Playfair Display', 'serif'],
+      'dm-sans': ['DM Sans', 'sans-serif'],
+    },
+    colors: {
+      'rose-gold': '#C9956A',
+      'salon-dark': '#0F172A',
+    }
+  }
+}
+```
+
+-----
+
+## Install Commands
+
+Run in order:
+
+```bash
+npm install next@14 react react-dom typescript @types/react @types/node
+npm install prisma@5 @prisma/client@5
+npm install @supabase/ssr @supabase/supabase-js
+npm install stripe @stripe/stripe-js
+npm install @anthropic-ai/sdk
+npm install resend
+npm install lucide-react
+npm install -D tailwindcss postcss autoprefixer @types/react-dom
+npx prisma generate
+npx prisma db push
+npm run dev
+```
+
+-----
+
+## Build Order — Follow This Exactly
+
+Build in this order so dependencies always exist before they are used:
+
+1. `package.json` + install all dependencies
+1. `tailwind.config.ts` + `globals.css` (fonts + theme)
+1. `prisma/schema.prisma` + run `prisma db push`
+1. `src/lib/prisma.ts`
+1. `src/lib/supabase/client.ts`, `server.ts`, `admin.ts`, `middleware.ts`
+1. `src/lib/stripe.ts`
+1. `src/lib/claude.ts`
+1. `src/types/index.ts`
+1. `src/middleware.ts`
+1. `src/app/layout.tsx` + `globals.css`
+1. Auth pages: `actions.ts`, `layout.tsx`, `login/`, `register/`
+1. `src/app/auth/callback/route.ts`
+1. UI components: `button.tsx`, `card.tsx`, `badge.tsx`, `input.tsx`, `modal.tsx`
+1. Dashboard components: `stats-card.tsx`, `risk-badge.tsx`, `recent-appointments.tsx`
+1. Dashboard layouts + pages: admin, staff, client
+1. Booking components: `service-selector.tsx`, `booking-form.tsx`
+1. Calendar component: `appointment-calendar.tsx`
+1. API routes: appointments, services, staff, ai/chat, webhooks/stripe
+1. AI chatbot floating widget on client dashboard
+1. Final: run `npx tsc --noEmit` — must show zero errors
+
+-----
+
+## Verification Checklist
+
+Before considering the build complete, verify all of these:
+
+- [ ] `npm run dev` starts with zero errors
+- [ ] `npx tsc --noEmit` returns zero TypeScript errors
+- [ ] Visit `/` → redirects to `/login`
+- [ ] Register a new account → redirects to `/client/dashboard`
+- [ ] Login → redirects to role-appropriate dashboard
+- [ ] Client visiting `/admin/dashboard` → redirected to `/client/dashboard`
+- [ ] Logout → redirects to `/login`
+- [ ] Admin dashboard shows 6 stat cards
+- [ ] Booking flow completes all 4 steps
+- [ ] AI chat button visible on client dashboard
+- [ ] Risk badges show on appointments
+- [ ] Cancellation policy enforced in API route
+
+-----
+
+## Pricing Model (for Settings page)
+
+- Base fee: **$20/month per location**
+- Per seat fee: **$10/month** (owners + all staff + secretaries)
+- Example: 1 location, 5 seats = **$70/month**
+- Multi-location: base fee charged per location
+
+-----
+
+## Key Business Rules — Never Break These
+
+1. HIGH_VALUE appointments (highlights, extensions) **always** require payment at booking
+1. Cancellation window default = **48 hours** — charge fee if cancelled after this
+1. No-show = **full charge** applied automatically
+1. Client must check a **policy acknowledgment checkbox** before confirming any booking
+1. Admin can see **all locations** — staff and clients see **only their location**
+1. Stripe amounts are always in **cents** (multiply dollars by 100)
+1. All dates stored in **UTC**, displayed in location timezone
+1. Never expose `SUPABASE_SERVICE_ROLE_KEY` or `STRIPE_SECRET_KEY` to the client
+
+-----
+
+*SalonSync — Build document v2.0*
