@@ -1,0 +1,17 @@
+packages:
+  "framer-motion": "For premium smooth animations and modal transitions"
+  "recharts": "For the admin analytics dashboard"
+  "date-fns": "For readable date formatting in appointments and schedules"
+  "clsx": "For conditional tailwind class merging"
+  "tailwind-merge": "For resolving tailwind class conflicts"
+  "sonner": "For premium toast notifications"
+
+images:
+  - path: "artifacts/salonsync/public/images/salon-hero.png"
+    description: "A luxury, modern, high-end hair salon interior, dark slate walls with warm ambient lighting, elegant mirrors, soft rose-gold metallic accents, minimal and premium aesthetic, architectural photography"
+    aspect_ratio: "16:9"
+
+notes:
+  - Using Replit Auth via @workspace/replit-auth-web
+  - Using React Query hooks from @workspace/api-client-react
+  - Implementing custom SSE stream hook for Anthropic chatbot

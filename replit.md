@@ -1,96 +1,153 @@
-# Workspace
+# SalonSync
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+SalonSync is a production-grade, multi-tenant SaaS platform for hair salons. Built as a pnpm monorepo with TypeScript throughout. Features multi-location support, three user roles (Admin/Staff/Client), AI-powered appointment risk scoring, sentiment analysis, an AI receptionist chatbot, analytics, Stripe-ready payments, gift cards, reviews, and notifications.
 
-## Stack
+## Design Language
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Background**: `#0F172A` (deep slate)
+- **Accent**: `#C9956A` (rose-gold)
+- **Headings**: Playfair Display
+- **Body**: DM Sans
+- **Tailwind CSS** with custom CSS variables in `index.css`
 
-## Structure
+## Tech Stack
+
+- **Monorepo**: pnpm workspaces
+- **Node.js**: 24, **TypeScript**: 5.9
+- **Frontend**: React + Vite (artifacts/salonsync)
+- **Backend**: Express 5 (artifacts/api-server)
+- **Database**: PostgreSQL + Drizzle ORM (`@workspace/db`)
+- **Auth**: Replit Auth (OpenID Connect) via `@workspace/replit-auth-web`
+- **AI**: Anthropic Claude via `@workspace/integrations-anthropic-ai` (Replit-proxied, no API key needed)
+- **API contract**: OpenAPI spec → Orval codegen → React Query hooks + Zod schemas
+- **Payments**: Stripe UI built, connect account pending
+
+## Monorepo Structure
 
 ```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+├── artifacts/
+│   ├── api-server/          # Express 5 API server (port 8080)
+│   └── salonsync/           # React + Vite frontend (port from $PORT)
+├── lib/
+│   ├── api-spec/            # OpenAPI spec + Orval codegen
+│   ├── api-client-react/    # Generated React Query hooks
+│   ├── api-zod/             # Generated Zod validation schemas
+│   ├── db/                  # Drizzle ORM schema + PostgreSQL client
+│   ├── replit-auth-web/     # Replit Auth hooks for browser (useAuth)
+│   └── integrations-anthropic-ai/  # Anthropic Claude client
+├── scripts/                 # Utility scripts
+├── pnpm-workspace.yaml
+├── tsconfig.base.json
+└── tsconfig.json
 ```
 
-## TypeScript & Composite Projects
+## Database Schema (17 tables)
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+- `enums` — appointmentStatus, paymentStatus, riskLevel, serviceCategory, userRole
+- `locations` — salon locations with cancellation fee policy
+- `users` (auth.ts) + `sessions` — Replit Auth users extended with role, phone, locationId, specialties, stripeCustomerId
+- `services` — STANDARD/HIGH_VALUE services with base price, duration
+- `appointments` — with risk score, cancellation tracking, fee charging
+- `appointment_services` — M2M: appointment → services
+- `payments` — Stripe payment records
+- `reviews` — with AI sentiment score + tags
+- `availability` — staff weekly schedules + block dates
+- `gift_cards` — purchasable gift cards with balance
+- `service_packages` — bundled service packages
+- `notifications` — in-app notification feed
+- `reminders` — scheduled appointment reminders
+- `products` — retail products sold at salon
+- `analytics` — daily aggregated metrics by location
+- `conversations` (id serial, userId, title) — AI chat sessions
+- `messages` (id serial, conversationId int FK) — AI chat messages
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+## API Routes (all under `/api`)
 
-## Root Scripts
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/healthz` | Health check |
+| GET/POST | `/auth/user`, `/auth/login`, `/auth/callback`, `/auth/logout` | Replit Auth |
+| GET/POST | `/locations` | List/create locations |
+| GET/PUT/DELETE | `/locations/:id` | Get/update/deactivate location |
+| GET/PUT | `/users`, `/users/:id` | List/update users |
+| GET/POST | `/services` | List/create services |
+| GET/PUT/DELETE | `/services/:id` | Get/update/deactivate service |
+| GET/POST | `/appointments` | List/create appointments |
+| GET/PUT | `/appointments/:id` | Get/update appointment |
+| POST | `/appointments/:id/cancel` | Cancel with fee enforcement |
+| GET/POST/DELETE | `/availability` | Staff availability |
+| GET/POST | `/reviews` | List/create reviews |
+| GET | `/analytics` | Analytics summary for location |
+| GET/POST | `/gift-cards` | Gift card management |
+| GET/POST | `/notifications` | Notifications + mark read |
+| POST | `/ai/risk-score` | AI appointment risk scoring (Claude) |
+| POST | `/ai/sentiment` | AI review sentiment analysis (Claude) |
+| POST | `/ai/chat` | AI receptionist one-shot chat (Claude) |
+| GET/POST/DELETE | `/anthropic/conversations` | Conversation management |
+| GET/POST | `/anthropic/conversations/:id/messages` | SSE streaming chat |
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+## Frontend Pages
 
-## Packages
+- `/` — Landing page (login redirect if not authenticated)
+- `/admin/dashboard` — Admin: stats, recent appointments, risk badges
+- `/admin/analytics` — Charts: revenue, appointments, cancellations (Recharts)
+- `/staff/dashboard` — Staff: today's schedule, personal stats
+- `/client/dashboard` — Client: upcoming appointments, book CTA, gift card balance
+- `/client/book` — 4-step booking wizard: service → stylist → time → confirm
+- `/admin/:page` — Stub fallback for admin sub-pages
 
-### `artifacts/api-server` (`@workspace/api-server`)
+## Key Behaviors
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
+### Cancellation Fee Enforcement
+When cancelling within `location.cancellationWindowHours` (default 48h):
+- Standard services: 50% of total price charged
+- HIGH_VALUE services: 100% of total price charged
+- Fee logged to `appointments.cancelFeeCharged`
 
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+### AI Risk Scoring
+On appointment creation, async POST to `/api/ai/risk-score`:
+- Claude analyzes client history + day/time → returns LOW/MEDIUM/HIGH
+- Score stored on the appointment, shown as colored badges in admin view
 
-### `lib/db` (`@workspace/db`)
+### AI Chatbot (SSE)
+POST `/api/anthropic/conversations/:id/messages` streams `text/event-stream`:
+- Events: `{"type":"text","text":"..."}` chunks, then `{"type":"done"}`
+- Frontend uses `use-chat-stream.ts` hook (EventSource/fetch reader)
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
+## Seeded Demo Data
 
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
+A single location "SalonSync Downtown" (Beverly Hills, CA) with 6 services has been seeded:
+- Classic Cut & Style ($85, STANDARD)
+- Color Treatment ($225, HIGH_VALUE)
+- Balayage ($350, HIGH_VALUE)
+- Deep Conditioning ($65, STANDARD)
+- Blowout ($55, STANDARD)
+- Keratin Smoothing ($400, HIGH_VALUE)
 
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+## Codegen
 
-### `lib/api-spec` (`@workspace/api-spec`)
+After editing `lib/api-spec/openapi.yaml`:
+```
+pnpm --filter @workspace/api-spec run codegen
+```
+This regenerates both `lib/api-client-react` and `lib/api-zod`.
 
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
+## DB Schema Push
 
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
+```
+pnpm --filter @workspace/db run push
+```
 
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
+## TypeScript Project References
 
-### `lib/api-zod` (`@workspace/api-zod`)
+Root `tsconfig.json` references all packages. API server depends on `@workspace/db`, `@workspace/api-zod`, `@workspace/integrations-anthropic-ai`, `@workspace/replit-auth-web`. Frontend depends on `@workspace/api-client-react`, `@workspace/replit-auth-web`.
 
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
+## Pending / Future Work
 
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+- Stripe payment integration (UI built, connect Stripe account to activate)
+- Email notifications via Resend
+- Multi-location admin switcher
+- Staff scheduling calendar view
+- Role-based route guards (currently uses `useAuth()` redirect on Landing)
