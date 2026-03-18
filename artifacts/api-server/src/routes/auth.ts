@@ -7,6 +7,7 @@ import {
   LogoutMobileSessionResponse,
 } from "@workspace/api-zod";
 import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import {
   clearSession,
   getOidcConfig,
@@ -176,6 +177,8 @@ router.get("/callback", async (req: Request, res: Response) => {
       firstName: dbUser.firstName,
       lastName: dbUser.lastName,
       profileImageUrl: dbUser.profileImageUrl,
+      role: dbUser.role,
+      locationId: dbUser.locationId,
     },
     access_token: tokens.access_token,
     refresh_token: tokens.refresh_token,
@@ -246,6 +249,8 @@ router.post(
           firstName: dbUser.firstName,
           lastName: dbUser.lastName,
           profileImageUrl: dbUser.profileImageUrl,
+          role: dbUser.role,
+          locationId: dbUser.locationId,
         },
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
@@ -267,6 +272,34 @@ router.post("/mobile-auth/logout", async (req: Request, res: Response) => {
     await deleteSession(sid);
   }
   res.json(LogoutMobileSessionResponse.parse({ success: true }));
+});
+
+// One-time endpoint to promote the currently logged-in user to ADMIN.
+// Works only if there are no existing admins yet, keeping it self-service but safe.
+router.post("/auth/make-admin", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated() || !req.user) {
+    res.status(401).json({ error: "You must be logged in first" });
+    return;
+  }
+
+  const existingAdmins = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.role, "ADMIN"));
+
+  if (existingAdmins.length > 0) {
+    res.status(403).json({
+      error: "An admin already exists. Contact your current admin to change roles.",
+    });
+    return;
+  }
+
+  await db
+    .update(usersTable)
+    .set({ role: "ADMIN", updatedAt: new Date() })
+    .where(eq(usersTable.id, req.user.id));
+
+  res.json({ success: true, message: "You are now an ADMIN. Please log out and log back in." });
 });
 
 export default router;

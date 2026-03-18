@@ -8,6 +8,7 @@ import { Analytics } from "@/pages/admin/Analytics";
 import { StaffDashboard } from "@/pages/staff/StaffDashboard";
 import { ClientDashboard } from "@/pages/client/ClientDashboard";
 import { BookingFlow } from "@/pages/client/BookingFlow";
+import { SetupAdmin } from "@/pages/SetupAdmin";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/staff/dashboard" component={StaffDashboard} />
       <Route path="/client/dashboard" component={ClientDashboard} />
       <Route path="/client/book" component={BookingFlow} />
+      <Route path="/setup-admin" component={SetupAdmin} />
       
       {/* Catch-all for unbuilt stub routes routes */}
       <Route path="/admin/:page" component={AdminDashboard} />

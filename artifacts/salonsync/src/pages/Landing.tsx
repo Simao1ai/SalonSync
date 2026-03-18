@@ -5,10 +5,15 @@ import { Sparkles, CalendarCheck, ShieldCheck, Scissors } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function Landing() {
-  const { isAuthenticated, isLoading, login } = useAuth();
+  const { isAuthenticated, isLoading, login, user } = useAuth();
 
   if (isLoading) return null;
-  if (isAuthenticated) return <Redirect to="/client/dashboard" />;
+  if (isAuthenticated) {
+    const role = user?.role;
+    if (role === "ADMIN") return <Redirect to="/admin/dashboard" />;
+    if (role === "STAFF") return <Redirect to="/staff/dashboard" />;
+    return <Redirect to="/client/dashboard" />;
+  }
 
   return (
     <div className="min-h-screen bg-background overflow-hidden selection:bg-primary/30">
