@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { AuthUser } from "@workspace/api-client-react";
 
 export type { AuthUser };
+
+export const DEV_AUTH_EVENT = "__salonsync_dev_auth__";
 
 interface AuthState {
   user: AuthUser | null;
@@ -11,32 +13,39 @@ interface AuthState {
   logout: () => void;
 }
 
-export const DEV_AUTH_EVENT = "__salonsync_dev_auth__";
-
 export function useAuth(): AuthState {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const cancelledRef = useRef(false);
 
-  const fetchUser = useCallback(() => {
+  // Initial fetch of the authenticated user from the server
+  useEffect(() => {
+    cancelledRef.current = false;
+
     fetch("/api/auth/user", { credentials: "include" })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<{ user: AuthUser | null }>;
       })
       .then((data) => {
-        setUser(data.user ?? null);
-        setIsLoading(false);
+        if (!cancelledRef.current) {
+          setUser(data.user ?? null);
+          setIsLoading(false);
+        }
       })
       .catch(() => {
-        setUser(null);
-        setIsLoading(false);
+        if (!cancelledRef.current) {
+          setUser(null);
+          setIsLoading(false);
+        }
       });
+
+    return () => {
+      cancelledRef.current = true;
+    };
   }, []);
 
-  useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
-
+  // Dev-only: listen for instant auth injection (bypasses page reload in iframe)
   useEffect(() => {
     const handler = (e: Event) => {
       const { user: devUser } = (e as CustomEvent<{ user: AuthUser }>).detail;
