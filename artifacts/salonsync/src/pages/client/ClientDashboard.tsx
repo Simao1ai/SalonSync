@@ -7,6 +7,7 @@ import { useListAppointments } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Calendar, CreditCard, Sparkles } from "lucide-react";
 import { Link } from "wouter";
+import { PaymentHistory } from "@/components/payments/PaymentHistory";
 
 export function ClientDashboard() {
   const { user } = useAuth();
@@ -101,6 +102,8 @@ export function ClientDashboard() {
               <Button variant="outline" className="w-full">Purchase Gift Card</Button>
             </CardContent>
           </Card>
+
+          <PaymentHistory />
         </div>
       </div>
     </DashboardLayout>
