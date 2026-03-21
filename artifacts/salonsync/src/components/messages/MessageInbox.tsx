@@ -5,8 +5,11 @@ import { MessageSquare, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 
-function fetchThreads(headers: Record<string, string>) {
-  return fetch("/api/messages/threads", { headers }).then(r => r.json());
+async function fetchThreads(headers: Record<string, string>) {
+  const res = await fetch("/api/messages/threads", { headers });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
 }
 
 function createThread(body: object, headers: Record<string, string>) {
