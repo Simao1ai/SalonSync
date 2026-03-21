@@ -40,26 +40,29 @@ router.post("/dev/login", async (req: Request, res: Response) => {
   }
 
   const devRole = role as Role;
-  const devUserId = `dev-user`;
 
-  // Upsert a single dev user and set the chosen role
+  // Map roles to the seeded demo users
+  const DEV_USER_ID: Record<Role, string> = {
+    ADMIN:  "seed-admin-001",
+    STAFF:  "seed-staff-001",
+    CLIENT: "seed-client-001",
+  };
+
+  const devUserId = DEV_USER_ID[devRole];
+
+  // Ensure the user exists (fallback upsert in case demo seed hasn't run)
   const [user] = await db
     .insert(usersTable)
     .values({
       id: devUserId,
-      email: "dev@salonsync.local",
+      email: `dev-${devRole.toLowerCase()}@salonsync.local`,
       firstName: "Dev",
       lastName: devRole.charAt(0) + devRole.slice(1).toLowerCase(),
       role: devRole,
     })
     .onConflictDoUpdate({
       target: usersTable.id,
-      set: {
-        role: devRole,
-        firstName: "Dev",
-        lastName: devRole.charAt(0) + devRole.slice(1).toLowerCase(),
-        updatedAt: new Date(),
-      },
+      set: { updatedAt: new Date() },
     })
     .returning();
 
