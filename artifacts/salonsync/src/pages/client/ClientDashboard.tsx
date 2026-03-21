@@ -7,13 +7,24 @@ import { useListAppointments } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Calendar, CreditCard, Sparkles } from "lucide-react";
 import { Link } from "wouter";
+import { PaymentHistory } from "@/components/payments/PaymentHistory";
+import { TipPrompt } from "@/components/tips/TipPrompt";
 
 export function ClientDashboard() {
   const { user } = useAuth();
   const { data: appointments, isLoading } = useListAppointments({ clientId: user?.id });
 
   const upcoming = appointments?.filter(a => new Date(a.startTime) > new Date() && a.status !== 'CANCELLED') || [];
-  const past = appointments?.filter(a => new Date(a.startTime) <= new Date() || a.status === 'CANCELLED') || [];
+  const past = appointments?.filter(a => new Date(a.startTime) <= new Date() || a.status === 'COMPLETED') || [];
+
+  // Completed appointments in the last 30 days that are eligible for tipping
+  const tipEligible = past.filter(a =>
+    a.status === "COMPLETED" &&
+    new Date(a.startTime) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  );
+
+  const serviceTotal = (apt: typeof past[0]) =>
+    apt.services?.reduce((s, svc) => s + parseFloat(svc.service?.price ?? "0"), 0) ?? 0;
 
   return (
     <DashboardLayout>
@@ -73,17 +84,37 @@ export function ClientDashboard() {
 
           <h2 className="text-2xl font-display font-bold pt-6">Past Appointments</h2>
           <div className="space-y-4">
-            {past.slice(0, 3).map(apt => (
-              <Card key={apt.id} className="opacity-80 hover:opacity-100 transition-opacity">
-                <CardContent className="p-5 flex justify-between items-center">
-                  <div>
-                    <h4 className="font-bold">{apt.services?.map(s => s.service?.name).join(', ')}</h4>
-                    <p className="text-sm text-muted-foreground">{format(new Date(apt.startTime), 'MMMM d, yyyy')}</p>
-                  </div>
-                  <Button variant="secondary" size="sm">Rebook</Button>
-                </CardContent>
-              </Card>
-            ))}
+            {past.slice(0, 5).map(apt => {
+              const isTipEligible = tipEligible.some(t => t.id === apt.id);
+              return (
+                <Card key={apt.id} className="opacity-80 hover:opacity-100 transition-opacity">
+                  <CardContent className="p-5">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="font-bold">{apt.services?.map(s => s.service?.name).join(', ')}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(apt.startTime), 'MMMM d, yyyy')}
+                          {apt.staff?.firstName && <> · with {apt.staff.firstName}</>}
+                        </p>
+                        {apt.status === "COMPLETED" && (
+                          <Badge variant="outline" className="mt-1 text-xs text-green-400 border-green-400/30">Completed</Badge>
+                        )}
+                      </div>
+                      <Button variant="secondary" size="sm">Rebook</Button>
+                    </div>
+
+                    {/* Tip prompt for completed appointments in last 30 days */}
+                    {isTipEligible && apt.staff?.id && (
+                      <TipPrompt
+                        appointmentId={apt.id}
+                        staffName={apt.staff.firstName ?? "your stylist"}
+                        serviceTotal={serviceTotal(apt)}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
 
@@ -101,6 +132,8 @@ export function ClientDashboard() {
               <Button variant="outline" className="w-full">Purchase Gift Card</Button>
             </CardContent>
           </Card>
+
+          <PaymentHistory />
         </div>
       </div>
     </DashboardLayout>

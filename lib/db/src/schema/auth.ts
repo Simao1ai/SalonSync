@@ -39,6 +39,8 @@ export const usersTable = pgTable("users", {
   specialties: text("specialties").array().default(sql`'{}'::text[]`),
   stripeCustomerId: varchar("stripe_customer_id"),
   isActive: boolean("is_active").default(true),
+  smsEnabled: boolean("sms_enabled").default(true),
+  emailEnabled: boolean("email_enabled").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

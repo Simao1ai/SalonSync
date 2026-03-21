@@ -15,3 +15,6 @@ export * from "./products";
 export * from "./analytics";
 export * from "./conversations";
 export * from "./messages";
+export * from "./direct-messages";
+export * from "./waitlist";
+export * from "./tips";

@@ -11,15 +11,19 @@ import { AdminStaff } from "@/pages/admin/AdminStaff";
 import { AdminServices } from "@/pages/admin/AdminServices";
 import { AdminSettings } from "@/pages/admin/AdminSettings";
 import { Analytics } from "@/pages/admin/Analytics";
+import { AdminWaitlist } from "@/pages/admin/AdminWaitlist";
 
 import { StaffDashboard } from "@/pages/staff/StaffDashboard";
 import { StaffClients } from "@/pages/staff/StaffClients";
 import { StaffEarnings } from "@/pages/staff/StaffEarnings";
+import { StaffMessages } from "@/pages/staff/StaffMessages";
 
 import { ClientDashboard } from "@/pages/client/ClientDashboard";
 import { BookingFlow } from "@/pages/client/BookingFlow";
 import { ClientReviews } from "@/pages/client/ClientReviews";
 import { ClientProfile } from "@/pages/client/ClientProfile";
+import { ClientMessages } from "@/pages/client/ClientMessages";
+import { ClientWaitlist } from "@/pages/client/ClientWaitlist";
 
 import { SetupAdmin } from "@/pages/SetupAdmin";
 import { DevSwitcher } from "@/components/DevSwitcher";
@@ -46,17 +50,21 @@ function Router() {
       <Route path="/admin/services" component={AdminServices} />
       <Route path="/admin/analytics" component={Analytics} />
       <Route path="/admin/settings" component={AdminSettings} />
+      <Route path="/admin/waitlist" component={AdminWaitlist} />
 
       {/* Staff */}
       <Route path="/staff/dashboard" component={StaffDashboard} />
       <Route path="/staff/clients" component={StaffClients} />
       <Route path="/staff/earnings" component={StaffEarnings} />
+      <Route path="/staff/messages" component={StaffMessages} />
 
       {/* Client */}
       <Route path="/client/dashboard" component={ClientDashboard} />
       <Route path="/client/book" component={BookingFlow} />
       <Route path="/client/reviews" component={ClientReviews} />
       <Route path="/client/profile" component={ClientProfile} />
+      <Route path="/client/messages" component={ClientMessages} />
+      <Route path="/client/waitlist" component={ClientWaitlist} />
 
       <Route path="/setup-admin" component={SetupAdmin} />
       <Route component={NotFound} />

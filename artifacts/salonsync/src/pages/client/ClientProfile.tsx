@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useListNotifications, useMarkNotificationRead, useListGiftCards } from "@workspace/api-client-react";
 import { formatCurrency } from "@/lib/utils";
-import { User, Bell, Gift, Settings, Save, CreditCard, Palette, ChevronRight } from "lucide-react";
+import { User, Bell, Gift, Settings, Save, CreditCard, Palette, ChevronRight, Phone, Mail, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 function Section({ title, icon: Icon, children }: { title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
   return (
@@ -23,8 +24,26 @@ function Section({ title, icon: Icon, children }: { title: string; icon: React.C
   );
 }
 
+function Toggle({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={() => !disabled && onChange(!value)}
+      disabled={disabled}
+      className={`relative w-10 h-5 rounded-full transition-colors ${value ? "bg-primary" : "bg-white/10"} ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+    >
+      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${value ? "left-5" : "left-0.5"}`} />
+    </button>
+  );
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const sid = sessionStorage.getItem("__salonsync_dev_sid__");
+  return sid ? { Authorization: `Bearer ${sid}` } : {};
+}
+
 export function ClientProfile() {
   const { user, logout } = useAuth();
+  const qc = useQueryClient();
   const { data: notifications, refetch: refetchNotifs } = useListNotifications({ userId: user?.id });
   const { mutate: markRead } = useMarkNotificationRead();
   const { data: giftCards } = useListGiftCards({ userId: user?.id });
@@ -32,8 +51,52 @@ export function ClientProfile() {
   const [hairType, setHairType] = useState("Curly");
   const [allergies, setAllergies] = useState("None");
   const [preferred, setPreferred] = useState("Any");
+  const [phone, setPhone] = useState("");
+
+  // ── Notification preferences ────────────────────────────────────────────
+  const { data: prefs, isLoading: prefsLoading } = useQuery({
+    queryKey: ["notif-prefs"],
+    queryFn: async () => {
+      const r = await fetch("/api/notifications/preferences", { headers: getAuthHeaders() });
+      return r.json() as Promise<{ smsEnabled: boolean; emailEnabled: boolean; phone: string | null; email: string | null }>;
+    },
+    enabled: !!user,
+  });
+
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [smsNotifs, setSmsNotifs] = useState(true);
+
+  useEffect(() => {
+    if (prefs) {
+      setEmailNotifs(prefs.emailEnabled ?? true);
+      setSmsNotifs(prefs.smsEnabled ?? true);
+      if (prefs.phone) setPhone(prefs.phone);
+    }
+  }, [prefs]);
+
+  const prefsMutation = useMutation({
+    mutationFn: async (data: { smsEnabled?: boolean; emailEnabled?: boolean }) => {
+      const r = await fetch("/api/notifications/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify(data),
+      });
+      return r.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notif-prefs"] });
+    },
+  });
+
+  function handleToggleEmail(v: boolean) {
+    setEmailNotifs(v);
+    prefsMutation.mutate({ emailEnabled: v });
+  }
+
+  function handleToggleSms(v: boolean) {
+    setSmsNotifs(v);
+    prefsMutation.mutate({ smsEnabled: v });
+  }
 
   const unread = notifications?.filter(n => !n.isRead) ?? [];
   const totalGiftBalance = (giftCards ?? []).filter(g => g.status === "ACTIVE").reduce((s, g) => s + parseFloat(g.balance), 0);
@@ -76,6 +139,23 @@ export function ClientProfile() {
                 <label className="text-sm font-medium text-white/70">Last Name</label>
                 <input defaultValue={user?.lastName ?? ""} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50" />
               </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-white/70 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5" /> Phone (for SMS reminders)
+                </label>
+                <input
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="+1 555 000 0000"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-white/70 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5" /> Email
+                </label>
+                <input defaultValue={user?.email ?? ""} disabled className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm opacity-50 cursor-not-allowed" />
+              </div>
             </div>
           </Section>
 
@@ -108,7 +188,7 @@ export function ClientProfile() {
                 <button onClick={handleMarkAllRead} className="text-xs text-primary hover:underline">Mark all read</button>
               </div>
             )}
-            <div className="space-y-3 mb-5">
+            <div className="space-y-3 mb-6">
               {notifications?.slice(0, 5).map(n => (
                 <div key={n.id} className={`flex items-start gap-3 p-3 rounded-xl transition-colors ${!n.isRead ? "bg-primary/5 border border-primary/10" : "bg-white/[0.02]"}`}>
                   <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.isRead ? "bg-primary" : "bg-white/20"}`} />
@@ -120,25 +200,52 @@ export function ClientProfile() {
                 </div>
               ))}
               {(!notifications || notifications.length === 0) && (
-                <p className="text-sm text-muted-foreground text-center py-4">No notifications</p>
+                <p className="text-sm text-muted-foreground text-center py-4">No notifications yet</p>
               )}
             </div>
-            <div className="divide-y divide-white/5 border-t border-white/5 pt-4">
+
+            {/* Delivery channel toggles */}
+            <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+              <div className="px-4 py-2.5 bg-white/[0.02] border-b border-white/[0.06]">
+                <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Delivery channels</p>
+              </div>
               {[
-                { label: "Email reminders", value: emailNotifs, set: setEmailNotifs },
-                { label: "SMS reminders", value: smsNotifs, set: setSmsNotifs },
-              ].map(({ label, value, set }) => (
-                <div key={label} className="flex items-center justify-between py-3">
-                  <span className="text-sm">{label}</span>
-                  <button
-                    onClick={() => set(!value)}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${value ? "bg-primary" : "bg-white/10"}`}
-                  >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${value ? "left-5" : "left-0.5"}`} />
-                  </button>
+                {
+                  label: "Email reminders",
+                  description: `Booking confirmations & 24hr reminders to ${prefs?.email ?? user?.email ?? "your email"}`,
+                  icon: Mail,
+                  value: emailNotifs,
+                  onChange: handleToggleEmail,
+                },
+                {
+                  label: "SMS reminders",
+                  description: phone ? `Text reminders to ${phone}` : "Add a phone number above to receive SMS reminders",
+                  icon: Phone,
+                  value: smsNotifs,
+                  onChange: handleToggleSms,
+                  disabled: !phone,
+                },
+              ].map(({ label, description, icon: Icon, value, onChange, disabled }) => (
+                <div key={label} className="flex items-center justify-between gap-4 px-4 py-3.5 border-b border-white/[0.04] last:border-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${value && !disabled ? "bg-primary/15" : "bg-white/[0.04]"}`}>
+                      <Icon className={`w-3.5 h-3.5 ${value && !disabled ? "text-primary" : "text-white/30"}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white/80">{label}</p>
+                      <p className="text-xs text-white/30 truncate">{description}</p>
+                    </div>
+                  </div>
+                  <Toggle value={value && !disabled} onChange={onChange} disabled={!!disabled || prefsLoading} />
                 </div>
               ))}
             </div>
+
+            {prefsMutation.isSuccess && (
+              <div className="mt-3 flex items-center gap-1.5 text-xs text-green-400">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Preferences saved
+              </div>
+            )}
           </Section>
         </div>
 
