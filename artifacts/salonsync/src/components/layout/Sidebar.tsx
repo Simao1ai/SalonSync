@@ -1,19 +1,22 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { 
-  LayoutDashboard, 
-  Calendar, 
+import {
+  LayoutDashboard,
+  Calendar,
   CalendarRange,
-  Users, 
-  Scissors, 
-  BarChart3, 
-  Settings, 
+  Users,
+  Scissors,
+  BarChart3,
+  Settings,
   LogOut,
   Sparkles,
   DollarSign,
   Star,
   UserCircle,
-  Bell,
+  ChevronRight,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useListNotifications } from "@workspace/api-client-react";
@@ -22,64 +25,100 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const role = user?.role || "CLIENT";
+  const [collapsed, setCollapsed] = useState(false);
 
   const { data: notifications } = useListNotifications({ userId: user?.id });
-  const unreadCount = notifications?.filter(n => !n.isRead).length ?? 0;
+  const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
 
   const adminLinks = [
-    { href: "/admin/dashboard",     label: "Dashboard",     icon: LayoutDashboard },
-    { href: "/admin/appointments",  label: "Appointments",  icon: Calendar },
-    { href: "/admin/calendar",      label: "Calendar",      icon: CalendarRange },
-    { href: "/admin/staff",         label: "Staff",         icon: Users },
-    { href: "/admin/services",      label: "Services",      icon: Scissors },
-    { href: "/admin/analytics",     label: "Analytics",     icon: BarChart3 },
-    { href: "/admin/settings",      label: "Settings",      icon: Settings },
+    { href: "/admin/dashboard",    label: "Dashboard",       icon: LayoutDashboard },
+    { href: "/admin/appointments", label: "Appointments",    icon: Calendar },
+    { href: "/admin/calendar",     label: "Calendar",        icon: CalendarRange },
+    { href: "/admin/staff",        label: "Staff",           icon: Users },
+    { href: "/admin/services",     label: "Services",        icon: Scissors },
+    { href: "/admin/analytics",    label: "Analytics",       icon: BarChart3 },
+    { href: "/admin/settings",     label: "Settings",        icon: Settings },
   ];
 
   const staffLinks = [
-    { href: "/staff/dashboard",  label: "My Schedule",  icon: LayoutDashboard },
-    { href: "/staff/clients",    label: "My Clients",   icon: Users },
-    { href: "/staff/earnings",   label: "Earnings",     icon: DollarSign },
+    { href: "/staff/dashboard", label: "My Schedule", icon: LayoutDashboard },
+    { href: "/staff/clients",   label: "My Clients",  icon: Users },
+    { href: "/staff/earnings",  label: "Earnings",    icon: DollarSign },
   ];
 
   const clientLinks = [
-    { href: "/client/dashboard", label: "My Dashboard",      icon: LayoutDashboard },
-    { href: "/client/book",      label: "Book Appointment",  icon: Calendar },
-    { href: "/client/reviews",   label: "My Reviews",        icon: Star },
-    { href: "/client/profile",   label: "Profile",           icon: UserCircle, badge: unreadCount > 0 ? unreadCount : 0 },
+    { href: "/client/dashboard", label: "My Dashboard",     icon: LayoutDashboard },
+    { href: "/client/book",      label: "Book Appointment", icon: Calendar },
+    { href: "/client/reviews",   label: "My Reviews",       icon: Star },
+    { href: "/client/profile",   label: "Profile",          icon: UserCircle, badge: unreadCount },
   ];
 
   const links = role === "ADMIN" ? adminLinks : role === "STAFF" ? staffLinks : clientLinks;
+  const initials = [user?.firstName?.charAt(0), user?.lastName?.charAt(0)].filter(Boolean).join("") || user?.email?.charAt(0) || "U";
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "User";
 
   return (
-    <div className="w-72 bg-[#0A0F1D] border-r border-white/5 h-screen flex flex-col hidden md:flex shrink-0 relative z-10 shadow-2xl">
-      <div className="p-8 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-[0_0_15px_rgba(201,149,106,0.3)]">
-          <Sparkles className="w-5 h-5 text-white" />
+    <aside
+      className={cn(
+        "hidden md:flex flex-col h-screen bg-[#09101E] border-r border-white/[0.06] shrink-0 transition-all duration-300 ease-in-out relative z-20",
+        collapsed ? "w-[68px]" : "w-[220px]"
+      )}
+    >
+      {/* Logo */}
+      <div className={cn("flex items-center h-[60px] px-4 shrink-0 border-b border-white/[0.06]", collapsed ? "justify-center" : "gap-2.5")}>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(201,149,106,0.35)]">
+          <Sparkles className="w-4 h-4 text-white" />
         </div>
-        <h1 className="font-display text-2xl font-bold text-white tracking-wide">SalonSync</h1>
+        {!collapsed && (
+          <span className="font-display text-lg font-bold text-white tracking-wide truncate">SalonSync</span>
+        )}
       </div>
 
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+      {/* Nav */}
+      <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto overflow-x-hidden">
         {links.map((link) => {
           const isActive = location === link.href || location.startsWith(link.href + "/");
           const badge = "badge" in link ? link.badge : 0;
           return (
             <Link key={link.href} href={link.href} className="block">
               <div
+                title={collapsed ? link.label : undefined}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group relative",
+                  "group relative flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 cursor-pointer",
+                  collapsed ? "justify-center" : "gap-3",
                   isActive
-                    ? "bg-primary/10 text-primary shadow-[inset_2px_0_0_0_rgba(201,149,106,1)]"
-                    : "text-muted-foreground hover:bg-white/5 hover:text-white"
+                    ? "bg-primary/12 text-white"
+                    : "text-white/40 hover:bg-white/5 hover:text-white/80"
                 )}
               >
-                <link.icon className={cn("w-5 h-5 transition-transform duration-200 shrink-0", isActive ? "scale-110" : "group-hover:scale-110")} />
-                <span className="flex-1">{link.label}</span>
-                {badge > 0 && (
-                  <span className="bg-primary text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {badge > 9 ? "9+" : badge}
-                  </span>
+                {/* Active indicator */}
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-primary" />
+                )}
+
+                <link.icon className={cn("shrink-0 transition-colors duration-150", isActive ? "text-primary" : "", collapsed ? "w-5 h-5" : "w-[18px] h-[18px]")} />
+
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 truncate">{link.label}</span>
+                    {badge > 0 && (
+                      <span className="ml-auto bg-primary text-white text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                        {badge > 9 ? "9+" : badge}
+                      </span>
+                    )}
+                  </>
+                )}
+
+                {/* Badge dot in collapsed mode */}
+                {collapsed && badge > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary border border-[#09101E]" />
+                )}
+
+                {/* Tooltip in collapsed mode */}
+                {collapsed && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-[#1A2234] border border-white/10 rounded-lg text-xs text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 -translate-x-2 transition-all duration-150 z-50 shadow-xl">
+                    {link.label}
+                  </div>
                 )}
               </div>
             </Link>
@@ -87,29 +126,54 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-6 border-t border-white/5 bg-[#0F172A]/50">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold overflow-hidden border border-primary/30">
-            {user?.profileImageUrl ? (
-              <img src={user.profileImageUrl} alt="Avatar" className="w-full h-full object-cover" />
-            ) : (
-              user?.firstName?.charAt(0) || user?.email?.charAt(0) || "U"
-            )}
+      {/* Bottom: user + collapse */}
+      <div className="border-t border-white/[0.06] p-2 shrink-0 space-y-1">
+        {/* User row */}
+        <div
+          title={collapsed ? fullName : undefined}
+          className={cn("flex items-center rounded-xl px-3 py-2.5 hover:bg-white/5 transition-colors cursor-default", collapsed ? "justify-center" : "gap-2.5")}
+        >
+          <div className="w-7 h-7 rounded-full bg-primary/25 border border-primary/30 flex items-center justify-center text-primary text-xs font-bold shrink-0 overflow-hidden">
+            {user?.profileImageUrl
+              ? <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+              : initials}
           </div>
-          <div className="overflow-hidden">
-            <p className="text-sm font-medium text-white truncate">{user?.firstName} {user?.lastName}</p>
-            <p className="text-xs text-primary capitalize">{role.toLowerCase()}</p>
-          </div>
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-white truncate leading-tight">{fullName}</p>
+              <p className="text-[10px] text-white/35 capitalize">{role.toLowerCase()}</p>
+            </div>
+          )}
         </div>
 
+        {/* Sign out */}
         <button
           onClick={() => logout()}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-medium text-muted-foreground hover:bg-white/5 hover:text-destructive transition-colors duration-200 group"
+          title={collapsed ? "Sign Out" : undefined}
+          className={cn(
+            "group w-full flex items-center rounded-xl px-3 py-2.5 text-white/35 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-150",
+            collapsed ? "justify-center" : "gap-3"
+          )}
         >
-          <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          Sign Out
+          <LogOut className="w-[18px] h-[18px] shrink-0 group-hover:-translate-x-0.5 transition-transform duration-150" />
+          {!collapsed && <span className="text-sm font-medium">Sign Out</span>}
+        </button>
+
+        {/* Collapse toggle */}
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className={cn(
+            "group w-full flex items-center rounded-xl px-3 py-2.5 text-white/25 hover:bg-white/5 hover:text-white/60 transition-colors duration-150",
+            collapsed ? "justify-center" : "gap-3"
+          )}
+        >
+          {collapsed
+            ? <PanelLeft className="w-[18px] h-[18px] shrink-0" />
+            : <><PanelLeftClose className="w-[18px] h-[18px] shrink-0" /><span className="text-sm font-medium">Collapse</span></>
+          }
         </button>
       </div>
-    </div>
+    </aside>
   );
 }
