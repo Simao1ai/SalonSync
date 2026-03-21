@@ -29,13 +29,13 @@ function devOnly(req: Request, res: Response): boolean {
   return true;
 }
 
-// POST /api/dev/login  — create an instant dev session without going through OIDC
-router.post("/dev/login", async (req: Request, res: Response) => {
+// GET /api/dev/login?role=ADMIN  — create an instant dev session and redirect (single HTTP hop)
+router.get("/dev/login", async (req: Request, res: Response) => {
   if (!devOnly(req, res)) return;
 
-  const { role } = req.body as { role?: string };
+  const { role } = req.query as { role?: string };
   if (!role || !VALID_ROLES.includes(role as Role)) {
-    res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(", ")}` });
+    res.status(400).send(`role must be one of: ${VALID_ROLES.join(", ")}`);
     return;
   }
 
@@ -91,7 +91,8 @@ router.post("/dev/login", async (req: Request, res: Response) => {
     maxAge: SESSION_TTL,
   });
 
-  res.json({ success: true, role: devRole, redirect: DEV_REDIRECT[devRole] });
+  // Set cookie and redirect in one response — avoids client-side timing race
+  res.redirect(DEV_REDIRECT[devRole]);
 });
 
 // POST /api/dev/switch-role — swap role on an existing session
