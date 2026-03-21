@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useAuth } from "@workspace/replit-auth-web";
-import { useLocation } from "wouter";
 
 const ROLES = [
   { label: "Admin", value: "ADMIN", path: "/admin/dashboard", color: "bg-rose-500 hover:bg-rose-400" },
@@ -8,15 +7,14 @@ const ROLES = [
   { label: "Client", value: "CLIENT", path: "/client/dashboard", color: "bg-sky-500 hover:bg-sky-400" },
 ] as const;
 
-export function DevSwitcher() {
-  if (!import.meta.env.DEV) return null;
-
+function DevSwitcherInner() {
   const { user, isAuthenticated } = useAuth();
-  const [, navigate] = useLocation();
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
 
   if (!isAuthenticated) return null;
+
+  const currentRole = user?.role ?? "CLIENT";
 
   async function switchRole(role: string, path: string) {
     setBusy(true);
@@ -27,15 +25,12 @@ export function DevSwitcher() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
       });
-      navigate(path);
-      window.location.reload();
+      window.location.href = path;
     } finally {
       setBusy(false);
       setOpen(false);
     }
   }
-
-  const currentRole = user?.role ?? "CLIENT";
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
@@ -69,4 +64,9 @@ export function DevSwitcher() {
       </button>
     </div>
   );
+}
+
+export function DevSwitcher() {
+  if (!import.meta.env.DEV) return null;
+  return <DevSwitcherInner />;
 }
