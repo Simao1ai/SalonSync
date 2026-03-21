@@ -14,10 +14,10 @@ import {
   DollarSign,
   Star,
   UserCircle,
-  ChevronRight,
   PanelLeftClose,
   PanelLeft,
   MessageSquare,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useListNotifications } from "@workspace/api-client-react";
@@ -52,6 +52,7 @@ export function Sidebar() {
     { href: "/admin/calendar",     label: "Calendar",        icon: CalendarRange },
     { href: "/admin/staff",        label: "Staff",           icon: Users },
     { href: "/admin/services",     label: "Services",        icon: Scissors },
+    { href: "/admin/waitlist",     label: "Waitlist",        icon: ClipboardList },
     { href: "/admin/analytics",    label: "Analytics",       icon: BarChart3 },
     { href: "/admin/settings",     label: "Settings",        icon: Settings },
   ];
@@ -66,6 +67,7 @@ export function Sidebar() {
   const clientLinks = [
     { href: "/client/dashboard", label: "My Dashboard",     icon: LayoutDashboard },
     { href: "/client/book",      label: "Book Appointment", icon: Calendar },
+    { href: "/client/waitlist",  label: "My Waitlist",      icon: ClipboardList },
     { href: "/client/reviews",   label: "My Reviews",       icon: Star },
     { href: "/client/messages",  label: "Messages",         icon: MessageSquare, badge: unreadMessages },
     { href: "/client/profile",   label: "Profile",          icon: UserCircle, badge: unreadCount },

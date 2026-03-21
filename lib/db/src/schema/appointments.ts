@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   doublePrecision,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -45,6 +46,13 @@ export const appointmentsTable = pgTable("appointments", {
   clientId: varchar("client_id", { length: 128 })
     .notNull()
     .references(() => usersTable.id),
+  parentAppointmentId: varchar("parent_appointment_id", { length: 128 }),
+
+  recurringRule: jsonb("recurring_rule").$type<{
+    frequency: "weekly" | "biweekly" | "monthly";
+    endDate: string;
+  } | null>(),
+
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

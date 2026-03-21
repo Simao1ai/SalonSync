@@ -15,6 +15,7 @@ import anthropicRouter from "./anthropic";
 import devRouter from "./dev";
 import paymentsRouter from "./payments";
 import messagesRouter from "./messages";
+import waitlistRouter from "./waitlist";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(anthropicRouter);
 router.use(devRouter);
 router.use(paymentsRouter);
 router.use(messagesRouter);
+router.use(waitlistRouter);
 
 export default router;
