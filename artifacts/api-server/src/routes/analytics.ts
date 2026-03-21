@@ -5,6 +5,7 @@ import {
   appointmentsTable,
   usersTable,
   reviewsTable,
+  tipsTable,
 } from "@workspace/db/schema";
 import { eq, and, gte, lte, sum, count, avg, sql, ne } from "drizzle-orm";
 
@@ -115,11 +116,31 @@ router.get("/analytics", async (req, res) => {
 
   const ratingMap = new Map(ratingRows.map(r => [r.staffId, { avgRating: Number(r.avgRating ?? 0), reviewCount: Number(r.reviewCount) }]));
 
+  // ── Tip revenue (must be before staffPerformance) ──────────────────────
+  const tipJoinFilters = [eq(appointmentsTable.locationId, locationId)];
+  if (startDate) tipJoinFilters.push(gte(tipsTable.createdAt, startDate));
+  if (endDate)   tipJoinFilters.push(lte(tipsTable.createdAt, endDate));
+
+  const [tipTotals] = await db
+    .select({ totalTips: sum(tipsTable.amount), tipCount: count(tipsTable.id) })
+    .from(tipsTable)
+    .innerJoin(appointmentsTable, eq(tipsTable.appointmentId, appointmentsTable.id))
+    .where(and(...tipJoinFilters));
+
+  const tipsByStaff = await db
+    .select({ staffId: tipsTable.staffId, tips: sum(tipsTable.amount) })
+    .from(tipsTable)
+    .innerJoin(appointmentsTable, eq(tipsTable.appointmentId, appointmentsTable.id))
+    .where(eq(appointmentsTable.locationId, locationId))
+    .groupBy(tipsTable.staffId);
+  const tipsByStaffMap = new Map(tipsByStaff.map(r => [r.staffId, Number(r.tips ?? 0)]));
+
   const staffPerformance = staffRows.map(s => ({
     staffId: s.staffId,
     name: [s.firstName, s.lastName].filter(Boolean).join(" ") || "Unknown",
     appointments: Number(s.appointments ?? 0),
     revenue: Number(s.revenue ?? 0),
+    tips: tipsByStaffMap.get(s.staffId) ?? 0,
     avgRating: ratingMap.get(s.staffId)?.avgRating ?? 0,
     reviewCount: ratingMap.get(s.staffId)?.reviewCount ?? 0,
   }));
@@ -145,6 +166,8 @@ router.get("/analytics", async (req, res) => {
     returningClients,
     cancelFeeRevenue: Number(totals?.cancelFeeRevenue ?? 0),
     avgAppointmentValue: Number(totals?.avgAppointmentValue ?? 0),
+    totalTips: Number(tipTotals?.totalTips ?? 0),
+    tipCount: Number(tipTotals?.tipCount ?? 0),
     dailyTrend,
     staffPerformance,
     records,

@@ -9,7 +9,7 @@ import { useGetAnalytics, useListLocations } from "@workspace/api-client-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import {
   TrendingUp, Users, Calendar, DollarSign, XCircle,
-  AlertTriangle, Download, ChevronDown,
+  AlertTriangle, Download, ChevronDown, Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as Select from "@radix-ui/react-select";
@@ -28,6 +28,7 @@ interface StaffMember {
   name: string;
   appointments: number;
   revenue: number;
+  tips: number;
   avgRating: number;
   reviewCount: number;
 }
@@ -42,6 +43,8 @@ interface ExtendedAnalytics {
   returningClients: number;
   cancelFeeRevenue: number;
   avgAppointmentValue: number;
+  totalTips: number;
+  tipCount: number;
   dailyTrend: DailyTrend[];
   staffPerformance: StaffMember[];
 }
@@ -113,7 +116,7 @@ function exportCSV(data: ExtendedAnalytics, locationId: string) {
   rows.push(["Staff Performance"]);
   rows.push(["Name", "Appointments", "Revenue", "Avg Rating", "Reviews"]);
   (data.staffPerformance ?? []).forEach(s =>
-    rows.push([s.name, String(s.appointments), String(s.revenue), String(s.avgRating.toFixed(1)), String(s.reviewCount)])
+    rows.push([s.name, String(s.appointments), String(s.revenue), String(s.tips ?? 0), String(s.avgRating.toFixed(1)), String(s.reviewCount)])
   );
 
   const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
@@ -198,6 +201,7 @@ export function Analytics() {
   const pieData = [
     { name: "Services", value: serviceRevenue },
     { name: "Cancel Fees", value: data?.cancelFeeRevenue ?? 0 },
+    { name: "Tips", value: data?.totalTips ?? 0 },
   ].filter(d => d.value > 0);
 
   const trend = data?.dailyTrend ?? [];
@@ -341,6 +345,17 @@ export function Analytics() {
           sub={`${totalClients} total clients`}
         />
       </div>
+
+      {/* Tips highlight bar */}
+      {(data?.totalTips ?? 0) > 0 && (
+        <div className="flex items-center gap-3 bg-rose-500/[0.07] border border-rose-500/20 rounded-xl px-5 py-3 mb-4 text-sm">
+          <Heart className="w-4 h-4 text-rose-400 flex-shrink-0" />
+          <span className="text-white/70">Tip revenue this period:</span>
+          <span className="font-bold text-rose-300">{fmt$(data?.totalTips ?? 0)}</span>
+          <span className="text-white/30">·</span>
+          <span className="text-white/50">{data?.tipCount ?? 0} tips from clients</span>
+        </div>
+      )}
 
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
@@ -511,7 +526,7 @@ export function Analytics() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-white/[0.05]">
-                    {["Staff Member", "Appointments", "Revenue", "Avg Revenue", "Rating"].map(h => (
+                    {["Staff Member", "Appointments", "Revenue", "Tips", "Avg Revenue", "Rating"].map(h => (
                       <th key={h} className="text-left px-6 py-3 text-white/30 font-medium">{h}</th>
                     ))}
                   </tr>
@@ -551,6 +566,13 @@ export function Analytics() {
                               />
                             </div>
                           </div>
+                        </td>
+                        <td className="px-6 py-3.5">
+                          {(s.tips ?? 0) > 0 ? (
+                            <span className="text-rose-400 font-medium">{fmt$(s.tips)}</span>
+                          ) : (
+                            <span className="text-white/20">—</span>
+                          )}
                         </td>
                         <td className="px-6 py-3.5 text-white/60">{fmt$(avgRev)}</td>
                         <td className="px-6 py-3.5">

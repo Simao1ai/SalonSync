@@ -16,6 +16,7 @@ import devRouter from "./dev";
 import paymentsRouter from "./payments";
 import messagesRouter from "./messages";
 import waitlistRouter from "./waitlist";
+import tipsRouter from "./tips";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(devRouter);
 router.use(paymentsRouter);
 router.use(messagesRouter);
 router.use(waitlistRouter);
+router.use(tipsRouter);
 
 export default router;
