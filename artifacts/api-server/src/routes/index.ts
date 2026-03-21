@@ -14,6 +14,7 @@ import aiRouter from "./ai";
 import anthropicRouter from "./anthropic";
 import devRouter from "./dev";
 import paymentsRouter from "./payments";
+import messagesRouter from "./messages";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(aiRouter);
 router.use(anthropicRouter);
 router.use(devRouter);
 router.use(paymentsRouter);
+router.use(messagesRouter);
 
 export default router;

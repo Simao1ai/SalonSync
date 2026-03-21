@@ -17,9 +17,11 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeft,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useListNotifications } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -29,6 +31,20 @@ export function Sidebar() {
 
   const { data: notifications } = useListNotifications({ userId: user?.id });
   const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
+
+  const { data: unreadMsgData } = useQuery<{ count: number }>({
+    queryKey: ["dm-unread-count"],
+    queryFn: async () => {
+      const headers: Record<string, string> = {};
+      const sid = sessionStorage.getItem("__salonsync_dev_sid__");
+      if (sid) headers["Authorization"] = `Bearer ${sid}`;
+      const r = await fetch("/api/messages/unread-count", { headers });
+      return r.json();
+    },
+    refetchInterval: 30000,
+    enabled: !!user,
+  });
+  const unreadMessages = unreadMsgData?.count ?? 0;
 
   const adminLinks = [
     { href: "/admin/dashboard",    label: "Dashboard",       icon: LayoutDashboard },
@@ -44,12 +60,14 @@ export function Sidebar() {
     { href: "/staff/dashboard", label: "My Schedule", icon: LayoutDashboard },
     { href: "/staff/clients",   label: "My Clients",  icon: Users },
     { href: "/staff/earnings",  label: "Earnings",    icon: DollarSign },
+    { href: "/staff/messages",  label: "Messages",    icon: MessageSquare, badge: unreadMessages },
   ];
 
   const clientLinks = [
     { href: "/client/dashboard", label: "My Dashboard",     icon: LayoutDashboard },
     { href: "/client/book",      label: "Book Appointment", icon: Calendar },
     { href: "/client/reviews",   label: "My Reviews",       icon: Star },
+    { href: "/client/messages",  label: "Messages",         icon: MessageSquare, badge: unreadMessages },
     { href: "/client/profile",   label: "Profile",          icon: UserCircle, badge: unreadCount },
   ];
 

@@ -7,6 +7,7 @@ import {
   usersTable,
   locationsTable,
   notificationsTable,
+  directMessageThreadsTable,
 } from "@workspace/db/schema";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 import {
@@ -122,6 +123,27 @@ router.post("/appointments", async (req, res) => {
       }))
     );
   }
+
+  // Auto-create a direct message thread linking staff ↔ client for this appointment
+  db.select()
+    .from(directMessageThreadsTable)
+    .where(
+      and(
+        eq(directMessageThreadsTable.staffId, body.staffId),
+        eq(directMessageThreadsTable.clientId, body.clientId),
+      )
+    )
+    .limit(1)
+    .then(([existing]) => {
+      if (!existing) {
+        db.insert(directMessageThreadsTable).values({
+          staffId: body.staffId,
+          clientId: body.clientId,
+          appointmentId: appointment.id,
+        }).catch(() => {});
+      }
+    })
+    .catch(() => {});
 
   // Trigger risk scoring async (don't block)
   fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:" + process.env.PORT}/api/ai/risk-score`, {
