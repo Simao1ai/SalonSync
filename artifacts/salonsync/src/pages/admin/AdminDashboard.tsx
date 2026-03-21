@@ -4,13 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { useGetAnalytics, useListAppointments } from "@workspace/api-client-react";
+import { useAuth } from "@workspace/replit-auth-web";
 import { format } from "date-fns";
 import { TrendingUp, Users, CalendarX, CalendarClock, DollarSign, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function AdminDashboard() {
-  // Assuming a static location ID for the prototype, in reality fetched from user or context
-  const locationId = "1"; 
+  const { user } = useAuth();
+  const locationId = user?.locationId ?? "da62c8fa-580b-44c9-bed8-e19938402d39";
   
   const { data: analytics, isLoading: analyticsLoading } = useGetAnalytics({ locationId });
   const { data: appointments, isLoading: appointmentsLoading } = useListAppointments({ locationId });

@@ -1,0 +1,216 @@
+import { useState } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useListLocations } from "@workspace/api-client-react";
+import { Settings, MapPin, Clock, CreditCard, Bell, Shield, Save } from "lucide-react";
+import { toast } from "sonner";
+
+const TABS = [
+  { id: "general", label: "General", icon: Settings },
+  { id: "hours", label: "Business Hours", icon: Clock },
+  { id: "payments", label: "Payments & Fees", icon: CreditCard },
+  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "security", label: "Security", icon: Shield },
+] as const;
+
+type Tab = typeof TABS[number]["id"];
+
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function InputField({ label, value, onChange, type = "text", hint }: { label: string; value: string; onChange: (v: string) => void; type?: string; hint?: string }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-sm font-medium text-white/80">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50"
+      />
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+export function AdminSettings() {
+  const [tab, setTab] = useState<Tab>("general");
+  const { data: locations } = useListLocations();
+  const location = locations?.[0];
+
+  const [name, setName] = useState(location?.name ?? "SalonSync Downtown");
+  const [phone, setPhone] = useState(location?.phone ?? "+1 (555) 123-4567");
+  const [address, setAddress] = useState(location?.address ?? "123 Luxury Ave, Beverly Hills");
+  const [cancelFee, setCancelFee] = useState("25");
+  const [depositPct, setDepositPct] = useState("50");
+  const [cancelHours, setCancelHours] = useState("24");
+
+  function handleSave() {
+    toast.success("Settings saved successfully");
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-display font-bold">Settings</h1>
+          <p className="text-muted-foreground mt-1">Configure your salon location</p>
+        </div>
+        <Button onClick={handleSave} className="gap-2"><Save className="w-4 h-4" /> Save Changes</Button>
+      </div>
+
+      <div className="flex gap-8">
+        <aside className="w-52 shrink-0">
+          <nav className="space-y-1">
+            {TABS.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${tab === t.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-white/5 hover:text-white"}`}
+              >
+                <t.icon className="w-4 h-4" />
+                {t.label}
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        <div className="flex-1 space-y-6">
+          {tab === "general" && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><MapPin className="w-5 h-5 text-primary" />Location Details</CardTitle></CardHeader>
+              <CardContent className="space-y-5">
+                <InputField label="Salon Name" value={name} onChange={setName} />
+                <InputField label="Phone Number" value={phone} onChange={setPhone} type="tel" />
+                <InputField label="Address" value={address} onChange={setAddress} />
+                <div className="pt-2">
+                  <Button onClick={handleSave} className="gap-2"><Save className="w-4 h-4" /> Save General Info</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {tab === "hours" && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-primary" />Business Hours</CardTitle></CardHeader>
+              <CardContent>
+                <div className="divide-y divide-white/5">
+                  {DAYS.map(day => {
+                    const isWeekend = day === "Sunday";
+                    return (
+                      <div key={day} className="flex items-center justify-between py-4">
+                        <span className="text-sm font-medium w-28">{day}</span>
+                        <div className="flex items-center gap-3">
+                          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                            <input type="checkbox" defaultChecked={!isWeekend} className="rounded accent-primary" />
+                            {isWeekend ? "Closed" : "Open"}
+                          </label>
+                          {!isWeekend && (
+                            <>
+                              <select defaultValue="09:00" className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50">
+                                {["08:00","09:00","10:00"].map(h => <option key={h} value={h}>{h}</option>)}
+                              </select>
+                              <span className="text-muted-foreground">—</span>
+                              <select defaultValue="18:00" className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50">
+                                {["17:00","18:00","19:00","20:00"].map(h => <option key={h} value={h}>{h}</option>)}
+                              </select>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="pt-4">
+                  <Button onClick={handleSave} className="gap-2"><Save className="w-4 h-4" /> Save Hours</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {tab === "payments" && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-primary" />Cancellation & Deposit Policy</CardTitle></CardHeader>
+              <CardContent className="space-y-5">
+                <InputField
+                  label="Cancellation Fee ($)"
+                  value={cancelFee}
+                  onChange={setCancelFee}
+                  type="number"
+                  hint="Charged when a client cancels within the window"
+                />
+                <InputField
+                  label="Cancellation Window (hours)"
+                  value={cancelHours}
+                  onChange={setCancelHours}
+                  type="number"
+                  hint="How many hours before the appointment cancellations incur a fee"
+                />
+                <InputField
+                  label="Deposit Percentage (%)"
+                  value={depositPct}
+                  onChange={setDepositPct}
+                  type="number"
+                  hint="Percentage of service price charged as a deposit for high-value services"
+                />
+                <div className="pt-2">
+                  <Button onClick={handleSave} className="gap-2"><Save className="w-4 h-4" /> Save Policy</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {tab === "notifications" && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Bell className="w-5 h-5 text-primary" />Notification Settings</CardTitle></CardHeader>
+              <CardContent>
+                <div className="divide-y divide-white/5">
+                  {[
+                    { label: "New Appointment Booked", desc: "Get notified when a new appointment is created" },
+                    { label: "Appointment Cancelled", desc: "Get notified on cancellations" },
+                    { label: "High-Risk Client Alert", desc: "Alert when an AI risk score is HIGH" },
+                    { label: "Daily Summary", desc: "Receive a daily digest of salon activity" },
+                    { label: "Staff No-Show Alert", desc: "Alert when staff hasn't checked in" },
+                  ].map(n => (
+                    <div key={n.label} className="flex items-center justify-between py-4">
+                      <div>
+                        <p className="text-sm font-medium">{n.label}</p>
+                        <p className="text-xs text-muted-foreground">{n.desc}</p>
+                      </div>
+                      <input type="checkbox" defaultChecked className="w-5 h-5 rounded accent-primary cursor-pointer" />
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-4">
+                  <Button onClick={handleSave} className="gap-2"><Save className="w-4 h-4" /> Save Notifications</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {tab === "security" && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="w-5 h-5 text-primary" />Security</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-green-400" />
+                  <div>
+                    <p className="text-sm font-medium text-green-400">Two-Factor Authentication is active</p>
+                    <p className="text-xs text-muted-foreground">Your account is protected with 2FA.</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start gap-3">Change Password</Button>
+                  <Button variant="outline" className="w-full justify-start gap-3">Manage API Keys</Button>
+                  <Button variant="outline" className="w-full justify-start gap-3 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10">
+                    Revoke All Sessions
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}

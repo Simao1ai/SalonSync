@@ -3,11 +3,23 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import NotFound from "@/pages/not-found";
 import { Landing } from "@/pages/Landing";
+
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
+import { AdminAppointments } from "@/pages/admin/AdminAppointments";
+import { AdminStaff } from "@/pages/admin/AdminStaff";
+import { AdminServices } from "@/pages/admin/AdminServices";
+import { AdminSettings } from "@/pages/admin/AdminSettings";
 import { Analytics } from "@/pages/admin/Analytics";
+
 import { StaffDashboard } from "@/pages/staff/StaffDashboard";
+import { StaffClients } from "@/pages/staff/StaffClients";
+import { StaffEarnings } from "@/pages/staff/StaffEarnings";
+
 import { ClientDashboard } from "@/pages/client/ClientDashboard";
 import { BookingFlow } from "@/pages/client/BookingFlow";
+import { ClientReviews } from "@/pages/client/ClientReviews";
+import { ClientProfile } from "@/pages/client/ClientProfile";
+
 import { SetupAdmin } from "@/pages/SetupAdmin";
 import { DevSwitcher } from "@/components/DevSwitcher";
 
@@ -24,17 +36,27 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+
+      {/* Admin */}
       <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/admin/appointments" component={AdminAppointments} />
+      <Route path="/admin/staff" component={AdminStaff} />
+      <Route path="/admin/services" component={AdminServices} />
       <Route path="/admin/analytics" component={Analytics} />
+      <Route path="/admin/settings" component={AdminSettings} />
+
+      {/* Staff */}
       <Route path="/staff/dashboard" component={StaffDashboard} />
+      <Route path="/staff/clients" component={StaffClients} />
+      <Route path="/staff/earnings" component={StaffEarnings} />
+
+      {/* Client */}
       <Route path="/client/dashboard" component={ClientDashboard} />
       <Route path="/client/book" component={BookingFlow} />
+      <Route path="/client/reviews" component={ClientReviews} />
+      <Route path="/client/profile" component={ClientProfile} />
+
       <Route path="/setup-admin" component={SetupAdmin} />
-      
-      {/* Catch-all for unbuilt stub routes routes */}
-      <Route path="/admin/:page" component={AdminDashboard} />
-      <Route path="/staff/:page" component={StaffDashboard} />
-      
       <Route component={NotFound} />
     </Switch>
   );
