@@ -7,6 +7,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, or, and, ne, sql, desc } from "drizzle-orm";
 import { z } from "zod/v4";
+import { sendNewMessageNotification } from "../services/notifications";
 
 const router: IRouter = Router();
 
@@ -210,6 +211,13 @@ router.post("/messages/threads/:id/messages", async (req: Request, res: Response
 
   // Broadcast via SSE to all listeners on this thread
   broadcastToThread(thread.id, { type: "message", message: msg });
+
+  // Notify recipient async — don't block
+  const recipientId = req.user.id === thread.staffId ? thread.clientId : thread.staffId;
+  const [sender] = await db.select({ firstName: usersTable.firstName, lastName: usersTable.lastName })
+    .from(usersTable).where(eq(usersTable.id, req.user.id));
+  const senderName = [sender?.firstName, sender?.lastName].filter(Boolean).join(" ") || "Someone";
+  sendNewMessageNotification(recipientId, senderName).catch(() => {});
 
   res.status(201).json(msg);
 });

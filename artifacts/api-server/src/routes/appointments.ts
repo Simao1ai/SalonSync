@@ -16,6 +16,11 @@ import {
   CancelAppointmentBody,
   ListAppointmentsQueryParams,
 } from "@workspace/api-zod";
+import {
+  sendAppointmentConfirmation,
+  sendCancellationNotice,
+  scheduleReminders,
+} from "../services/notifications";
 
 const router: IRouter = Router();
 
@@ -157,6 +162,14 @@ router.post("/appointments", async (req, res) => {
     }),
   }).catch(() => {});
 
+  // Send confirmation & schedule reminders async (don't block)
+  getAppointmentWithDetails(appointment.id).then(details => {
+    if (details) {
+      sendAppointmentConfirmation(details as any).catch(() => {});
+      scheduleReminders(appointment.id, startTime).catch(() => {});
+    }
+  }).catch(() => {});
+
   const result = await getAppointmentWithDetails(appointment.id);
   res.status(201).json(result);
 });
@@ -240,12 +253,9 @@ router.post("/appointments/:id/cancel", async (req, res) => {
     .where(eq(appointmentsTable.id, req.params.id))
     .returning();
 
-  // Create notification for client
-  await db.insert(notificationsTable).values({
-    type: "APPOINTMENT_CANCELLED",
-    title: "Appointment Cancelled",
-    message: `Your appointment has been cancelled. ${message}`,
-    userId: appointment.clientId,
+  // Send cancellation notice to client and staff (async, don't block)
+  getAppointmentWithDetails(cancelled.id).then(details => {
+    if (details) sendCancellationNotice(details as any, feeCharged).catch(() => {});
   }).catch(() => {});
 
   const result = await getAppointmentWithDetails(cancelled.id);
