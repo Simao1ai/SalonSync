@@ -9,6 +9,7 @@ import { StaffDashboard } from "@/pages/staff/StaffDashboard";
 import { ClientDashboard } from "@/pages/client/ClientDashboard";
 import { BookingFlow } from "@/pages/client/BookingFlow";
 import { SetupAdmin } from "@/pages/SetupAdmin";
+import { DevSwitcher } from "@/components/DevSwitcher";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,6 +46,7 @@ function App() {
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <Router />
       </WouterRouter>
+      <DevSwitcher />
       <Toaster theme="dark" position="bottom-right" richColors />
     </QueryClientProvider>
   );

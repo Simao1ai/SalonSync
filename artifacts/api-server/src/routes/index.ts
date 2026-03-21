@@ -12,6 +12,7 @@ import giftCardsRouter from "./gift-cards";
 import notificationsRouter from "./notifications";
 import aiRouter from "./ai";
 import anthropicRouter from "./anthropic";
+import devRouter from "./dev";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(giftCardsRouter);
 router.use(notificationsRouter);
 router.use(aiRouter);
 router.use(anthropicRouter);
+router.use(devRouter);
 
 export default router;
