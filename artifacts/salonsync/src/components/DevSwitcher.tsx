@@ -1,4 +1,4 @@
-import { useAuth, DEV_AUTH_EVENT } from "@workspace/replit-auth-web";
+import { useAuth, DEV_AUTH_EVENT, setDevSession } from "@workspace/replit-auth-web";
 import { useLocation } from "wouter";
 import { useState } from "react";
 
@@ -23,18 +23,21 @@ function DevSwitcherInner() {
         credentials: "include",
       });
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
-      const data = await res.json() as { success: boolean; user: unknown };
+      const data = await res.json() as { success: boolean; user: unknown; sessionId: string };
 
-      // Push the authenticated user into useAuth() without a page reload
+      // Store session ID so useAuth() sends it as a Bearer token on every fetch
+      // — this works even when iframe cookie restrictions block Set-Cookie
+      setDevSession(data.sessionId);
+
+      // Update every mounted useAuth() instance immediately (no page reload)
       window.dispatchEvent(
         new CustomEvent(DEV_AUTH_EVENT, { detail: { user: data.user } })
       );
 
-      // Give React one tick to flush the auth state update before the route
-      // guard on the new page evaluates isAuthenticated
+      // Give React one tick to flush the auth state before the new route renders
       await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-      // Client-side navigate (Wouter) — no full page reload needed
+      // Client-side navigate — no full page reload
       navigate(path);
     } catch (err) {
       console.error("[DevSwitcher] login failed:", err);

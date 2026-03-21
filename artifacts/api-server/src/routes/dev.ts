@@ -91,9 +91,9 @@ router.get("/dev/login", async (req: Request, res: Response) => {
     maxAge: SESSION_TTL,
   });
 
-  // Set cookie for API calls, and return the user so the client can update auth state
-  // without a page reload (iframe-safe: no window.location navigation needed)
-  res.json({ success: true, user: sessionData.user });
+  // Set cookie for normal API calls; also return sessionId so the client can
+  // store it as a Bearer token — works regardless of iframe cookie restrictions
+  res.json({ success: true, user: sessionData.user, sessionId: sid });
 });
 
 // POST /api/dev/switch-role — swap role on an existing session

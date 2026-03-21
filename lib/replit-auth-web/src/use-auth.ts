@@ -4,6 +4,31 @@ import type { AuthUser } from "@workspace/api-client-react";
 export type { AuthUser };
 
 export const DEV_AUTH_EVENT = "__salonsync_dev_auth__";
+const DEV_SESSION_KEY = "__salonsync_dev_sid__";
+
+/** In dev mode, DevSwitcher stores the session id here after login. */
+export function setDevSession(sessionId: string) {
+  if (typeof sessionStorage !== "undefined") {
+    sessionStorage.setItem(DEV_SESSION_KEY, sessionId);
+  }
+}
+
+export function clearDevSession() {
+  if (typeof sessionStorage !== "undefined") {
+    sessionStorage.removeItem(DEV_SESSION_KEY);
+  }
+}
+
+export function getDevSessionId(): string | null {
+  if (typeof sessionStorage === "undefined") return null;
+  return sessionStorage.getItem(DEV_SESSION_KEY);
+}
+
+/** Build fetch headers that include the Bearer token when a dev session exists. */
+function authHeaders(): HeadersInit {
+  const sid = getDevSessionId();
+  return sid ? { Authorization: `Bearer ${sid}` } : {};
+}
 
 interface AuthState {
   user: AuthUser | null;
@@ -18,11 +43,13 @@ export function useAuth(): AuthState {
   const [isLoading, setIsLoading] = useState(true);
   const cancelledRef = useRef(false);
 
-  // Initial fetch of the authenticated user from the server
   useEffect(() => {
     cancelledRef.current = false;
 
-    fetch("/api/auth/user", { credentials: "include" })
+    fetch("/api/auth/user", {
+      credentials: "include",
+      headers: authHeaders(),
+    })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<{ user: AuthUser | null }>;
@@ -45,7 +72,7 @@ export function useAuth(): AuthState {
     };
   }, []);
 
-  // Dev-only: listen for instant auth injection (bypasses page reload in iframe)
+  // Dev-only: push auth state from DevSwitcher without a page reload
   useEffect(() => {
     const handler = (e: Event) => {
       const { user: devUser } = (e as CustomEvent<{ user: AuthUser }>).detail;
@@ -62,6 +89,7 @@ export function useAuth(): AuthState {
   }, []);
 
   const logout = useCallback(() => {
+    clearDevSession();
     window.location.href = "/api/logout";
   }, []);
 
