@@ -2,9 +2,12 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
+  createSession,
   getSession,
   getSessionId,
   updateSession,
+  SESSION_COOKIE,
+  SESSION_TTL,
 } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -12,11 +15,85 @@ const router: IRouter = Router();
 const VALID_ROLES = ["ADMIN", "STAFF", "CLIENT"] as const;
 type Role = (typeof VALID_ROLES)[number];
 
-router.post("/dev/switch-role", async (req: Request, res: Response) => {
+const DEV_REDIRECT: Record<Role, string> = {
+  ADMIN: "/admin/dashboard",
+  STAFF: "/staff/dashboard",
+  CLIENT: "/client/dashboard",
+};
+
+function devOnly(req: Request, res: Response): boolean {
   if (process.env.NODE_ENV === "production") {
     res.status(404).json({ error: "Not found" });
+    return false;
+  }
+  return true;
+}
+
+// POST /api/dev/login  — create an instant dev session without going through OIDC
+router.post("/dev/login", async (req: Request, res: Response) => {
+  if (!devOnly(req, res)) return;
+
+  const { role } = req.body as { role?: string };
+  if (!role || !VALID_ROLES.includes(role as Role)) {
+    res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(", ")}` });
     return;
   }
+
+  const devRole = role as Role;
+  const devUserId = `dev-user`;
+
+  // Upsert a single dev user and set the chosen role
+  const [user] = await db
+    .insert(usersTable)
+    .values({
+      id: devUserId,
+      email: "dev@salonsync.local",
+      firstName: "Dev",
+      lastName: devRole.charAt(0) + devRole.slice(1).toLowerCase(),
+      role: devRole,
+    })
+    .onConflictDoUpdate({
+      target: usersTable.id,
+      set: {
+        role: devRole,
+        firstName: "Dev",
+        lastName: devRole.charAt(0) + devRole.slice(1).toLowerCase(),
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
+
+  const sessionData = {
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profileImageUrl: null,
+      role: user.role,
+      locationId: user.locationId,
+    },
+    access_token: "dev-token",
+    refresh_token: undefined,
+    expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+  };
+
+  const sid = await createSession(sessionData);
+
+  res.cookie(SESSION_COOKIE, sid, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_TTL,
+  });
+
+  res.json({ success: true, role: devRole, redirect: DEV_REDIRECT[devRole] });
+});
+
+// POST /api/dev/switch-role — swap role on an existing session
+router.post("/dev/switch-role", async (req: Request, res: Response) => {
+  if (!devOnly(req, res)) return;
 
   if (!req.isAuthenticated() || !req.user) {
     res.status(401).json({ error: "Not authenticated" });
@@ -30,16 +107,10 @@ router.post("/dev/switch-role", async (req: Request, res: Response) => {
   }
 
   const sid = getSessionId(req);
-  if (!sid) {
-    res.status(400).json({ error: "No session found" });
-    return;
-  }
+  if (!sid) { res.status(400).json({ error: "No session found" }); return; }
 
   const session = await getSession(sid);
-  if (!session) {
-    res.status(400).json({ error: "Session expired" });
-    return;
-  }
+  if (!session) { res.status(400).json({ error: "Session expired" }); return; }
 
   await db
     .update(usersTable)
@@ -48,13 +119,10 @@ router.post("/dev/switch-role", async (req: Request, res: Response) => {
 
   await updateSession(sid, {
     ...session,
-    user: {
-      ...session.user,
-      role: role as Role,
-    },
+    user: { ...session.user, role: role as Role },
   });
 
-  res.json({ success: true, role });
+  res.json({ success: true, role, redirect: DEV_REDIRECT[role as Role] });
 });
 
 export default router;
