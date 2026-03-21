@@ -11,34 +11,40 @@ interface AuthState {
   logout: () => void;
 }
 
+export const DEV_AUTH_EVENT = "__salonsync_dev_auth__";
+
 export function useAuth(): AuthState {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-
+  const fetchUser = useCallback(() => {
     fetch("/api/auth/user", { credentials: "include" })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<{ user: AuthUser | null }>;
       })
       .then((data) => {
-        if (!cancelled) {
-          setUser(data.user ?? null);
-          setIsLoading(false);
-        }
+        setUser(data.user ?? null);
+        setIsLoading(false);
       })
       .catch(() => {
-        if (!cancelled) {
-          setUser(null);
-          setIsLoading(false);
-        }
+        setUser(null);
+        setIsLoading(false);
       });
+  }, []);
 
-    return () => {
-      cancelled = true;
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { user: devUser } = (e as CustomEvent<{ user: AuthUser }>).detail;
+      setUser(devUser);
+      setIsLoading(false);
     };
+    window.addEventListener(DEV_AUTH_EVENT, handler);
+    return () => window.removeEventListener(DEV_AUTH_EVENT, handler);
   }, []);
 
   const login = useCallback(() => {

@@ -45,8 +45,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <Router />
+        <DevSwitcher />
       </WouterRouter>
-      <DevSwitcher />
       <Toaster theme="dark" position="bottom-right" richColors />
     </QueryClientProvider>
   );

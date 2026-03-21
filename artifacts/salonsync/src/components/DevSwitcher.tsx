@@ -1,17 +1,47 @@
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth, DEV_AUTH_EVENT } from "@workspace/replit-auth-web";
+import { useLocation } from "wouter";
 import { useState } from "react";
 
 const ROLES = [
-  { label: "Admin",  value: "ADMIN",  color: "bg-rose-500 hover:bg-rose-400" },
-  { label: "Staff",  value: "STAFF",  color: "bg-amber-500 hover:bg-amber-400" },
-  { label: "Client", value: "CLIENT", color: "bg-sky-500 hover:bg-sky-400" },
+  { label: "Admin",  value: "ADMIN",  path: "/admin/dashboard",  color: "bg-rose-500 hover:bg-rose-400" },
+  { label: "Staff",  value: "STAFF",  path: "/staff/dashboard",  color: "bg-amber-500 hover:bg-amber-400" },
+  { label: "Client", value: "CLIENT", path: "/client/dashboard", color: "bg-sky-500 hover:bg-sky-400" },
 ] as const;
 
 function DevSwitcherInner() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const [open, setOpen] = useState(true);
-
+  const [busy, setBusy] = useState(false);
   const currentRole = user?.role ?? null;
+
+  async function handleLogin(role: string, path: string) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/dev/login?role=${role}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const data = await res.json() as { success: boolean; user: unknown };
+
+      // Push the authenticated user into useAuth() without a page reload
+      window.dispatchEvent(
+        new CustomEvent(DEV_AUTH_EVENT, { detail: { user: data.user } })
+      );
+
+      // Give React one tick to flush the auth state update before the route
+      // guard on the new page evaluates isAuthenticated
+      await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
+      // Client-side navigate (Wouter) — no full page reload needed
+      navigate(path);
+    } catch (err) {
+      console.error("[DevSwitcher] login failed:", err);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="fixed bottom-4 right-4 z-[9999] flex flex-col items-end gap-2">
@@ -24,18 +54,21 @@ function DevSwitcherInner() {
             )}
           </div>
           {ROLES.map((r) => (
-            <a
+            <button
               key={r.value}
-              href={`/api/dev/login?role=${r.value}`}
-              className={`w-full text-sm font-semibold rounded-lg px-3 py-2 text-white transition-all text-center ${r.color} ${currentRole === r.value ? "opacity-50 pointer-events-none" : ""}`}
+              type="button"
+              disabled={busy || currentRole === r.value}
+              onClick={() => handleLogin(r.value, r.path)}
+              className={`w-full text-sm font-semibold rounded-lg px-3 py-2 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${r.color}`}
             >
-              {currentRole === r.value ? `✓ ${r.label} (active)` : r.label}
-            </a>
+              {currentRole === r.value ? `✓ ${r.label}` : busy ? "…" : r.label}
+            </button>
           ))}
         </div>
       )}
 
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 bg-slate-900/95 backdrop-blur hover:bg-slate-800 border border-white/20 text-white text-xs font-mono rounded-full px-3 py-1.5 shadow-lg transition-colors"
       >

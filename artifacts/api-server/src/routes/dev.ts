@@ -91,8 +91,9 @@ router.get("/dev/login", async (req: Request, res: Response) => {
     maxAge: SESSION_TTL,
   });
 
-  // Set cookie and redirect in one response — avoids client-side timing race
-  res.redirect(DEV_REDIRECT[devRole]);
+  // Set cookie for API calls, and return the user so the client can update auth state
+  // without a page reload (iframe-safe: no window.location navigation needed)
+  res.json({ success: true, user: sessionData.user });
 });
 
 // POST /api/dev/switch-role — swap role on an existing session
