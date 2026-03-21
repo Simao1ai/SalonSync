@@ -6,6 +6,7 @@ import { Landing } from "@/pages/Landing";
 
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 import { AdminAppointments } from "@/pages/admin/AdminAppointments";
+import { AdminCalendar } from "@/pages/admin/AdminCalendar";
 import { AdminStaff } from "@/pages/admin/AdminStaff";
 import { AdminServices } from "@/pages/admin/AdminServices";
 import { AdminSettings } from "@/pages/admin/AdminSettings";
@@ -40,6 +41,7 @@ function Router() {
       {/* Admin */}
       <Route path="/admin/dashboard" component={AdminDashboard} />
       <Route path="/admin/appointments" component={AdminAppointments} />
+      <Route path="/admin/calendar" component={AdminCalendar} />
       <Route path="/admin/staff" component={AdminStaff} />
       <Route path="/admin/services" component={AdminServices} />
       <Route path="/admin/analytics" component={Analytics} />

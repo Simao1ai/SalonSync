@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
   Calendar, 
+  CalendarRange,
   Users, 
   Scissors, 
   BarChart3, 
@@ -28,6 +29,7 @@ export function Sidebar() {
   const adminLinks = [
     { href: "/admin/dashboard",     label: "Dashboard",     icon: LayoutDashboard },
     { href: "/admin/appointments",  label: "Appointments",  icon: Calendar },
+    { href: "/admin/calendar",      label: "Calendar",      icon: CalendarRange },
     { href: "/admin/staff",         label: "Staff",         icon: Users },
     { href: "/admin/services",      label: "Services",      icon: Scissors },
     { href: "/admin/analytics",     label: "Analytics",     icon: BarChart3 },
