@@ -104,10 +104,10 @@ export function ClientDashboard() {
                     </div>
 
                     {/* Tip prompt for completed appointments in last 30 days */}
-                    {isTipEligible && apt.staff?.id && (
+                    {isTipEligible && (
                       <TipPrompt
                         appointmentId={apt.id}
-                        staffName={apt.staff.firstName ?? "your stylist"}
+                        staffName={apt.staff?.firstName ?? "your stylist"}
                         serviceTotal={serviceTotal(apt)}
                       />
                     )}
