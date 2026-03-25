@@ -144,10 +144,33 @@ pnpm --filter @workspace/db run push
 
 Root `tsconfig.json` references all packages. API server depends on `@workspace/db`, `@workspace/api-zod`, `@workspace/integrations-anthropic-ai`, `@workspace/replit-auth-web`. Frontend depends on `@workspace/api-client-react`, `@workspace/replit-auth-web`.
 
+## Recently Added Features
+
+### Public Salon Marketplace (`/explore`)
+- `GET /api/explore/locations` — public, no auth, aggregates avg rating + top 3 services per location
+- `Explore.tsx` — card grid with search, sort (Top Rated / Lowest Price), price range filter
+- "Find a Salon" button on Landing hero links to `/explore`
+
+### Staff Schedule Calendar (`/admin/schedule`)
+- `GET /api/schedule?locationId=&weekOf=` — returns appointments + staff + availability for the week
+- `PATCH /api/appointments/:id/reschedule` — changes staffId/startTime, recalculates endTime
+- `AdminSchedule.tsx` — staff-as-columns weekly grid with @dnd-kit drag-and-drop
+- Drag appointment blocks to reassign staff or move to a different day
+- AI risk score badges (LOW/MED/HIGH), block-time overlays, appointment detail modal
+- Added "Schedule" link to Admin sidebar
+
+### Deep Financial Reporting (`/admin/analytics`)
+- Analytics page refactored into tabbed layout:
+  - **Overview** — all existing KPI cards, charts, staff table (unchanged)
+  - **Stylist Productivity** — per-stylist revenue, avg ticket, cancellation/no-show rates
+  - **Revenue Per Chair** — utilization % (booked vs available minutes), dual-axis chart
+  - **Retail Sales** — top services by revenue, products catalog, performance table
+  - **Multi-Location** — network-wide revenue/appointments/ratings comparison
+- Custom date range picker alongside preset buttons (7/30/90 days)
+- 4 new API endpoints: `GET /api/analytics/stylist-productivity`, `/revenue-per-chair`, `/retail-sales`, `/multi-location`
+
 ## Pending / Future Work
 
 - Stripe payment integration (UI built, connect Stripe account to activate)
 - Email notifications via Resend
-- Multi-location admin switcher
-- Staff scheduling calendar view
 - Role-based route guards (currently uses `useAuth()` redirect on Landing)

@@ -17,6 +17,9 @@ import paymentsRouter from "./payments";
 import messagesRouter from "./messages";
 import waitlistRouter from "./waitlist";
 import tipsRouter from "./tips";
+import exploreRouter from "./explore";
+import scheduleRouter from "./schedule";
+import analyticsExtendedRouter from "./analytics-extended";
 
 const router: IRouter = Router();
 
@@ -38,5 +41,8 @@ router.use(paymentsRouter);
 router.use(messagesRouter);
 router.use(waitlistRouter);
 router.use(tipsRouter);
+router.use(exploreRouter);
+router.use(scheduleRouter);
+router.use(analyticsExtendedRouter);
 
 export default router;

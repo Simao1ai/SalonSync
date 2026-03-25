@@ -18,6 +18,7 @@ import {
   PanelLeft,
   MessageSquare,
   ClipboardList,
+  LayoutGrid,
 } from "lucide-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useListNotifications } from "@workspace/api-client-react";
@@ -50,6 +51,7 @@ export function Sidebar() {
     { href: "/admin/dashboard",    label: "Dashboard",       icon: LayoutDashboard },
     { href: "/admin/appointments", label: "Appointments",    icon: Calendar },
     { href: "/admin/calendar",     label: "Calendar",        icon: CalendarRange },
+    { href: "/admin/schedule",     label: "Schedule",        icon: LayoutGrid },
     { href: "/admin/staff",        label: "Staff",           icon: Users },
     { href: "/admin/services",     label: "Services",        icon: Scissors },
     { href: "/admin/waitlist",     label: "Waitlist",        icon: ClipboardList },

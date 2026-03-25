@@ -12,6 +12,9 @@ import { AdminServices } from "@/pages/admin/AdminServices";
 import { AdminSettings } from "@/pages/admin/AdminSettings";
 import { Analytics } from "@/pages/admin/Analytics";
 import { AdminWaitlist } from "@/pages/admin/AdminWaitlist";
+import { AdminSchedule } from "@/pages/admin/AdminSchedule";
+
+import { Explore } from "@/pages/Explore";
 
 import { StaffDashboard } from "@/pages/staff/StaffDashboard";
 import { StaffClients } from "@/pages/staff/StaffClients";
@@ -41,6 +44,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/explore" component={Explore} />
 
       {/* Admin */}
       <Route path="/admin/dashboard" component={AdminDashboard} />
@@ -51,6 +55,7 @@ function Router() {
       <Route path="/admin/analytics" component={Analytics} />
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/waitlist" component={AdminWaitlist} />
+      <Route path="/admin/schedule" component={AdminSchedule} />
 
       {/* Staff */}
       <Route path="/staff/dashboard" component={StaffDashboard} />

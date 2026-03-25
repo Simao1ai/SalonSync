@@ -1,9 +1,9 @@
 import { useAuth } from "@workspace/replit-auth-web";
-import { Redirect } from "wouter";
+import { Redirect, Link } from "wouter";
 import { motion } from "framer-motion";
 import {
   Sparkles, CalendarCheck, ShieldCheck, Scissors,
-  BrainCircuit, Star, TrendingUp, ArrowRight, Check,
+  BrainCircuit, Star, TrendingUp, ArrowRight, Check, Search,
 } from "lucide-react";
 
 const STATS = [
@@ -110,12 +110,13 @@ export function Landing() {
             >
               Start for free <ArrowRight className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => login()}
-              className="flex items-center justify-center gap-2 text-white/70 hover:text-white border border-white/10 hover:border-white/20 font-medium px-8 py-3.5 rounded-full transition-all text-sm"
+            <Link
+              href="/explore"
+              className="flex items-center justify-center gap-2 text-white/70 hover:text-white border border-white/10 hover:border-primary/40 hover:bg-primary/5 font-medium px-8 py-3.5 rounded-full transition-all text-sm"
             >
-              View demo
-            </button>
+              <Search className="w-4 h-4" />
+              Find a Salon
+            </Link>
           </div>
 
           {/* Social proof avatars */}
