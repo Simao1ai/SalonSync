@@ -1,0 +1,91 @@
+We are working on SalonSync, a production-grade multi-tenant SaaS for hair salons 
+(pnpm monorepo, React + Vite frontend, Express 5 backend, PostgreSQL + Drizzle ORM, 
+Tailwind CSS, design tokens: bg #0F172A, accent #C9956A, Playfair Display headings, 
+DM Sans body). Do not change any existing functionality. Build the following three 
+features:
+
+---
+
+FEATURE 1: STAFF SCHEDULING CALENDAR VIEW
+
+Add a drag-and-drop staff scheduling calendar accessible to Admin and Staff roles.
+
+Frontend (artifacts/salonsync):
+- Add route /admin/schedule
+- Weekly calendar grid showing all staff members as columns and time slots (8am–8pm) 
+  as rows
+- Each appointment block is draggable to a new time slot or staff column
+- Color-code blocks by appointment status (confirmed, pending, cancelled)
+- Show AI risk score badge (LOW/MEDIUM/HIGH) on each appointment block
+- Add "Block Time" button per staff member to mark unavailability
+- Mobile-responsive: collapse to single-staff view with a staff switcher dropdown
+- Use existing React Query hooks from @workspace/api-client-react
+
+Backend (artifacts/api-server):
+- Add GET /api/schedule?locationId=&weekOf= — returns all appointments + staff 
+  availability for the week
+- Add PATCH /api/appointments/:id/reschedule — updates staffId + startTime, 
+  re-triggers AI risk scoring async
+- Reuse existing appointments and availability tables, no schema changes needed
+
+---
+
+FEATURE 2: CLIENT-FACING SALON MARKETPLACE / DISCOVERY PAGE
+
+Add a public-facing (unauthenticated) page where prospective clients can discover 
+and browse salon locations.
+
+Frontend:
+- Add public route /explore (no auth required)
+- Display a card grid of all active salon locations
+- Each card shows: salon name, address, hero image placeholder, average review score, 
+  top 3 services with prices, "Book Now" CTA → redirects to /client/book with 
+  locationId pre-filled
+- Add search/filter bar: filter by service category (STANDARD / HIGH_VALUE), 
+  sort by rating or price
+- Add to the landing page (/) a "Find a Salon" button linking to /explore
+
+Backend:
+- Add GET /api/explore/locations — public endpoint (no auth middleware), returns 
+  active locations with aggregated avg rating and top services
+- No new tables needed
+
+---
+
+FEATURE 3: DEEP FINANCIAL REPORTING DASHBOARD
+
+Expand the existing /admin/analytics page with multi-location financial reporting.
+
+Frontend:
+- Replace the basic charts with a tabbed analytics dashboard with these tabs:
+  1. Overview — existing revenue + appointment charts (keep as-is)
+  2. Stylist Productivity — table showing each staff member: total appointments, 
+     revenue generated, avg ticket size, cancellation rate, no-show rate
+  3. Revenue Per Chair — bar chart showing revenue per active staff member per week, 
+     with a utilization % (booked slots / available slots)
+  4. Retail Sales — table of products sold with quantity, revenue, top seller badge
+  5. Multi-Location Comparison — if admin has multiple locations, side-by-side bar 
+     charts comparing revenue, cancellations, and utilization across locations
+- Add a date range picker (last 7 days / 30 days / 90 days / custom) that filters 
+  all tabs
+- Use Recharts (already installed)
+
+Backend:
+- Add GET /api/analytics/stylist-productivity?locationId=&from=&to=
+- Add GET /api/analytics/revenue-per-chair?locationId=&from=&to=
+- Add GET /api/analytics/retail-sales?locationId=&from=&to=
+- Add GET /api/analytics/multi-location?from=&to= (admin only, all locations)
+- Derive all data from existing appointments, appointment_services, payments, 
+  availability, and products tables
+
+---
+
+GENERAL RULES:
+- TypeScript strict throughout, no `any` casting
+- All new API routes must be added to lib/api-spec/openapi.yaml and codegen must 
+  be re-run (pnpm --filter @workspace/api-spec run codegen)
+- Follow existing file/folder naming conventions
+- Do not modify the database schema
+- Do not touch auth logic or existing routes
+- All UI must use the existing design tokens (#0F172A bg, #C9956A accent, 
+  Playfair Display, DM Sans, Tailwind classes)
