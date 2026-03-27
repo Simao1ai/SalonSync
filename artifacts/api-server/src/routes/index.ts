@@ -24,6 +24,8 @@ import platformRouter from "./platform";
 import googleCalendarRouter from "./google-calendar";
 import intakeFormsRouter from "./intake-forms";
 import aiPhase2Router from "./ai-phase2";
+import socialBookingRouter from "./social-booking";
+import reserveRouter from "./reserve";
 
 const router: IRouter = Router();
 
@@ -52,5 +54,7 @@ router.use(platformRouter);
 router.use(googleCalendarRouter);
 router.use(intakeFormsRouter);
 router.use(aiPhase2Router);
+router.use(socialBookingRouter);
+router.use(reserveRouter);
 
 export default router;

@@ -7,6 +7,7 @@ import { useListLocations } from "@workspace/api-client-react";
 import {
   Megaphone, Sparkles, Mail, MessageSquare, Share2,
   Send, Trash2, Eye, BarChart3, Plus, Loader2, CheckCircle, Clock,
+  Instagram, Facebook, Link2, Copy, ExternalLink, MousePointerClick,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getAuthHeaders } from "@/lib/auth-headers";
@@ -338,6 +339,137 @@ export function Marketing() {
           })}
         </div>
       )}
+      <SocialBookingLinks />
     </DashboardLayout>
+  );
+}
+
+const PLATFORM_META: Record<string, { icon: typeof Instagram; label: string; color: string }> = {
+  instagram: { icon: Instagram, label: "Instagram", color: "text-pink-400" },
+  facebook: { icon: Facebook, label: "Facebook", color: "text-blue-400" },
+  tiktok: { icon: Share2, label: "TikTok", color: "text-cyan-400" },
+  twitter: { icon: Share2, label: "Twitter/X", color: "text-white/70" },
+  linkedin: { icon: Share2, label: "LinkedIn", color: "text-blue-300" },
+  other: { icon: Link2, label: "Other", color: "text-white/50" },
+};
+
+function SocialBookingLinks() {
+  const queryClient = useQueryClient();
+
+  const { data: links = [] } = useQuery({
+    queryKey: ["social-booking-links", SEEDED_LOC],
+    queryFn: async () => {
+      const r = await fetch(`/api/social-booking/links?locationId=${SEEDED_LOC}`, { headers: getAuthHeaders() });
+      return r.ok ? r.json() : [];
+    },
+  });
+
+  const generateMut = useMutation({
+    mutationFn: async (platform: string) => {
+      const r = await fetch("/api/social-booking/generate", {
+        method: "POST",
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId: SEEDED_LOC, platform }),
+      });
+      if (!r.ok) throw new Error("Failed to generate link");
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["social-booking-links"] });
+      toast.success("Booking link created!");
+    },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      await fetch(`/api/social-booking/links/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["social-booking-links"] });
+      toast.success("Link removed");
+    },
+  });
+
+  const copyUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast.success("Link copied to clipboard!");
+  };
+
+  return (
+    <Card className="mt-6 bg-[#0B1120] border-white/[0.06]">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-white flex items-center gap-2">
+            <Link2 className="w-5 h-5 text-primary" />
+            Social Booking Links
+          </CardTitle>
+        </div>
+        <p className="text-xs text-white/40 mt-1">Generate trackable "Book Now" links for your social media profiles</p>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {Object.entries(PLATFORM_META).map(([key, meta]) => {
+            const Icon = meta.icon;
+            return (
+              <Button
+                key={key}
+                variant="outline"
+                size="sm"
+                onClick={() => generateMut.mutate(key)}
+                disabled={generateMut.isPending}
+                className="border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-white/70"
+              >
+                <Icon className={cn("w-3.5 h-3.5 mr-1.5", meta.color)} />
+                {meta.label}
+              </Button>
+            );
+          })}
+        </div>
+
+        {links.length === 0 ? (
+          <p className="text-sm text-white/30 text-center py-4">No booking links yet. Create one above!</p>
+        ) : (
+          <div className="space-y-2">
+            {links.map((link: any) => {
+              const meta = PLATFORM_META[link.platform] || PLATFORM_META.other;
+              const Icon = meta.icon;
+              return (
+                <div key={link.id} className="flex items-center justify-between p-3 bg-white/[0.03] border border-white/[0.06] rounded-xl">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={cn("w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center", meta.color)}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">{meta.label}</p>
+                      <p className="text-[10px] text-white/30 truncate">{link.url}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 text-xs text-white/40">
+                      <span className="flex items-center gap-1">
+                        <MousePointerClick className="w-3 h-3" />
+                        {link.clicks ?? 0} clicks
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        {link.bookings ?? 0} bookings
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => copyUrl(link.url)} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white transition-all">
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => deleteMut.mutate(link.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-all">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

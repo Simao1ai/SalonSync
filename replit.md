@@ -23,7 +23,8 @@ Key architectural decisions include:
 - **Extensibility:** The platform allows for white-label branding, customizable intake forms, and integrations with external services like Google Calendar.
 - **Advanced Reporting:** Analytics are provided through a dedicated dashboard with various metrics, including stylist productivity, revenue per chair, retail sales, and multi-location comparisons, with export capabilities (CSV/PDF).
 - **Platform Super Admin:** A dedicated interface for super administrators to manage tenants, users, announcements, and subscriptions across the entire platform, including user impersonation for support.
-- **AI Superpowers (Phase 2):** Planned features include AI Schedule Optimizer, AI Marketing Campaign Generator, AI Business Insights (Natural Language to SQL), AI Churn Prediction, and AI Smart Pricing, all with robust security measures.
+- **AI Superpowers (Phase 2):** AI Schedule Optimizer, AI Marketing Campaign Generator, AI Business Insights (NL→SQL), AI Churn Prediction, AI Smart Pricing — all implemented with security hardening.
+- **Marketplace & Growth (Phase 3):** Enhanced public marketplace with geolocation search, salon detail pages, gallery carousels, staff profiles, verified reviews with sentiment badges, JSON-LD structured data. Social media booking link generator with click/booking tracking. Google Reserve availability/service feeds.
 
 ## External Dependencies
 

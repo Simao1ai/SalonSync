@@ -32,6 +32,9 @@ export const locationsTable = pgTable("locations", {
   logoUrl: varchar("logo_url", { length: 500 }),
   primaryColor: varchar("primary_color", { length: 20 }),
   tagline: varchar("tagline", { length: 500 }),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  description: text("description"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

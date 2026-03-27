@@ -24,3 +24,5 @@ export * from "./notification-preferences";
 export * from "./intake-forms";
 export * from "./campaigns";
 export * from "./ai-insights";
+export * from "./gallery";
+export * from "./social-booking-links";

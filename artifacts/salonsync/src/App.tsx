@@ -17,6 +17,7 @@ import { IntakeFormBuilder } from "@/pages/admin/IntakeFormBuilder";
 import { Marketing } from "@/pages/admin/Marketing";
 
 import { Explore } from "@/pages/Explore";
+import { SalonDetail } from "@/pages/SalonDetail";
 
 import { StaffDashboard } from "@/pages/staff/StaffDashboard";
 import { StaffClients } from "@/pages/staff/StaffClients";
@@ -58,6 +59,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/explore" component={Explore} />
+      <Route path="/explore/:id" component={SalonDetail} />
 
       {/* Admin */}
       <Route path="/admin/dashboard" component={AdminDashboard} />
