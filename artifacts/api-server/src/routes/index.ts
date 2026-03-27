@@ -21,6 +21,8 @@ import exploreRouter from "./explore";
 import scheduleRouter from "./schedule";
 import analyticsExtendedRouter from "./analytics-extended";
 import platformRouter from "./platform";
+import googleCalendarRouter from "./google-calendar";
+import intakeFormsRouter from "./intake-forms";
 
 const router: IRouter = Router();
 
@@ -46,5 +48,7 @@ router.use(exploreRouter);
 router.use(scheduleRouter);
 router.use(analyticsExtendedRouter);
 router.use(platformRouter);
+router.use(googleCalendarRouter);
+router.use(intakeFormsRouter);
 
 export default router;

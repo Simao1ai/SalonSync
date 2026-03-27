@@ -20,6 +20,7 @@ import {
   ClipboardList,
   LayoutGrid,
   X,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useListNotifications } from "@workspace/api-client-react";
@@ -64,6 +65,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
     { href: "/admin/services",     label: "Services",        icon: Scissors },
     { href: "/admin/waitlist",     label: "Waitlist",        icon: ClipboardList },
     { href: "/admin/analytics",    label: "Analytics",       icon: BarChart3 },
+    { href: "/admin/intake-forms", label: "Intake Forms",    icon: FileText },
     { href: "/admin/settings",     label: "Settings",        icon: Settings },
   ];
 
@@ -72,6 +74,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
     { href: "/staff/clients",   label: "My Clients",  icon: Users },
     { href: "/staff/earnings",  label: "Earnings",    icon: DollarSign },
     { href: "/staff/messages",  label: "Messages",    icon: MessageSquare, badge: unreadMessages },
+    { href: "/staff/settings",  label: "Settings",    icon: Settings },
   ];
 
   const clientLinks = [

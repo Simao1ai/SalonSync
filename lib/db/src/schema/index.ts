@@ -21,3 +21,4 @@ export * from "./tips";
 export * from "./announcements";
 export * from "./subscriptions";
 export * from "./notification-preferences";
+export * from "./intake-forms";

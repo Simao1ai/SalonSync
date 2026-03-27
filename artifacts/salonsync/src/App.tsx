@@ -13,6 +13,7 @@ import { AdminSettings } from "@/pages/admin/AdminSettings";
 import { Analytics } from "@/pages/admin/Analytics";
 import { AdminWaitlist } from "@/pages/admin/AdminWaitlist";
 import { AdminSchedule } from "@/pages/admin/AdminSchedule";
+import { IntakeFormBuilder } from "@/pages/admin/IntakeFormBuilder";
 
 import { Explore } from "@/pages/Explore";
 
@@ -20,6 +21,7 @@ import { StaffDashboard } from "@/pages/staff/StaffDashboard";
 import { StaffClients } from "@/pages/staff/StaffClients";
 import { StaffEarnings } from "@/pages/staff/StaffEarnings";
 import { StaffMessages } from "@/pages/staff/StaffMessages";
+import { StaffSettings } from "@/pages/staff/StaffSettings";
 
 import { ClientDashboard } from "@/pages/client/ClientDashboard";
 import { BookingFlow } from "@/pages/client/BookingFlow";
@@ -66,12 +68,14 @@ function Router() {
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/waitlist" component={AdminWaitlist} />
       <Route path="/admin/schedule" component={AdminSchedule} />
+      <Route path="/admin/intake-forms" component={IntakeFormBuilder} />
 
       {/* Staff */}
       <Route path="/staff/dashboard" component={StaffDashboard} />
       <Route path="/staff/clients" component={StaffClients} />
       <Route path="/staff/earnings" component={StaffEarnings} />
       <Route path="/staff/messages" component={StaffMessages} />
+      <Route path="/staff/settings" component={StaffSettings} />
 
       {/* Client */}
       <Route path="/client/dashboard" component={ClientDashboard} />

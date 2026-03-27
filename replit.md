@@ -43,7 +43,7 @@ SalonSync is a production-grade, multi-tenant SaaS platform for hair salons. Bui
 └── tsconfig.json
 ```
 
-## Database Schema (20 tables)
+## Database Schema (22 tables)
 
 - `enums` — appointmentStatus, paymentStatus, riskLevel, serviceCategory, userRole (includes SUPER_ADMIN)
 - `locations` — salon locations with cancellation fee policy
@@ -65,6 +65,8 @@ SalonSync is a production-grade, multi-tenant SaaS platform for hair salons. Bui
 - `messages` (id serial, conversationId int FK) — AI chat messages
 - `announcements` (id serial) — platform-wide announcements (title, message, type, targetRole, createdBy)
 - `subscriptions` — tenant billing/subscription plans (locationId, plan, status, monthlyAmount)
+- `intake_forms` — customizable intake forms per location (fields JSONB, HIPAA flag)
+- `intake_form_responses` — client form responses with signature data
 
 ## API Routes (all under `/api`)
 
@@ -197,9 +199,28 @@ Root `tsconfig.json` references all packages. API server depends on `@workspace/
 - **Admin Dashboard**: Heading shows tenant brand name
 - **Settings > Branding tab**: Admin can configure brand name, logo URL, tagline, and accent color with live preview
 
+### Google Calendar Integration
+- **OAuth flow**: `/api/google-calendar/connect`, `/callback`, `/disconnect`
+- **Sync**: `/api/google-calendar/sync` — pulls Google Calendar blocks into SalonSync availability
+- **Service**: `google-calendar.ts` — create/update/delete calendar events on appointment changes
+- **Staff Settings** (`/staff/settings`): Connect/Disconnect/Sync UI for Google Calendar
+- **Env vars needed**: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (graceful no-op when absent)
+
+### Intake Forms Builder (`/admin/intake-forms`)
+- **CRUD routes**: `/api/intake-forms` (admin only)
+- **Response routes**: `/api/intake-forms/responses` (submit), `/api/intake-forms/:formId/responses` (admin-only view), `/api/clients/:clientId/intake-responses` (role-gated), `/api/appointments/:appointmentId/intake-responses`
+- **Form builder UI**: Drag-and-drop with @dnd-kit, field types (text/textarea/select/checkbox/date/signature/file), HIPAA flag, live preview
+- **Access control**: Response viewing restricted to ADMIN/SUPER_ADMIN; client responses accessible to staff/admin or the client themselves
+
+### Report Export (CSV + PDF)
+- **Export dropdown** on Analytics page with CSV and PDF options per active tab
+- **CSV exports**: Per-tab functions in `report-export.ts` (overview, stylist, chair, retail, multi-location)
+- **PDF generation**: `@react-pdf/renderer` branded reports with KPI cards, tables, accent bar, footer (`pdf-report.tsx`)
+- **Error handling**: `response.ok` validation + toast feedback on export success/failure
+
 ## Pending / Future Work
 
 - Stripe payment integration (UI built, connect Stripe account to activate)
-- Email notifications via Resend
+- Email notifications via Resend (templates built, needs RESEND_API_KEY)
 - Role-based route guards (currently uses `useAuth()` redirect on Landing)
 - White-label: apply `primaryColor` to CSS custom properties for full theme customization

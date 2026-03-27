@@ -16,7 +16,12 @@ import {
   BarChart3, ShoppingBag, MapPin, Award, Percent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import * as Select from "@radix-ui/react-select";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { exportStylistCSV, exportChairCSV, exportRetailCSV, exportMultiLocationCSV } from "@/lib/report-export";
+import { generatePdfReport } from "@/lib/pdf-report";
+import { FileText } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 interface DailyTrend { date: string; label: string; revenue: number; appointments: number; cancelFees: number; }
@@ -163,7 +168,7 @@ function Controls({
   useCustom: boolean; setUseCustom: (v: boolean) => void;
   customStart: string; setCustomStart: (v: string) => void;
   customEnd: string; setCustomEnd: (v: string) => void;
-  onExport: () => void; canExport: boolean;
+  onExport: (format: "csv" | "pdf") => void; canExport: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -217,12 +222,31 @@ function Controls({
         </div>
       )}
 
-      <button onClick={onExport} disabled={!canExport}
-        className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white/60 hover:border-white/20 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        <Download className="w-3.5 h-3.5" />
-        Export CSV
-      </button>
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger disabled={!canExport}
+          className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white/60 hover:border-white/20 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Export
+          <ChevronDown className="w-3 h-3 ml-0.5" />
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content className="bg-[#1A2234] border border-white/10 rounded-xl shadow-2xl z-50 p-1 min-w-[140px]" sideOffset={4}>
+            <DropdownMenu.Item
+              onClick={() => onExport("csv")}
+              className="flex items-center gap-2 px-3 py-2 text-xs text-white/70 rounded-lg cursor-pointer hover:bg-white/[0.06] hover:text-white focus:outline-none"
+            >
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </DropdownMenu.Item>
+            <DropdownMenu.Item
+              onClick={() => onExport("pdf")}
+              className="flex items-center gap-2 px-3 py-2 text-xs text-white/70 rounded-lg cursor-pointer hover:bg-white/[0.06] hover:text-white focus:outline-none"
+            >
+              <FileText className="w-3.5 h-3.5" /> Export PDF
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
     </div>
   );
 }
@@ -971,6 +995,131 @@ export function Analytics() {
   );
   const data = raw as unknown as ExtendedAnalytics | undefined;
 
+  const dateLabel = `${startDate}_${endDate}`;
+  const locName = (locations as any[]).find((l: any) => l.id === locationId)?.name ?? "Salon";
+
+  async function handleExport(format: "csv" | "pdf") {
+    const headers = getAuthHeaders();
+
+    if (activeTab === "overview" && data) {
+      if (format === "csv") {
+        exportCSV(data, locationId);
+      } else {
+        await generatePdfReport({
+          brandName: locName,
+          reportTitle: "Analytics Overview",
+          dateRange: `${startDate} — ${endDate}`,
+          kpis: [
+            { label: "Total Revenue", value: `$${(data.totalRevenue ?? 0).toFixed(2)}` },
+            { label: "Appointments", value: String(data.totalAppointments ?? 0) },
+            { label: "Avg Booking", value: `$${(data.avgAppointmentValue ?? 0).toFixed(2)}` },
+            { label: "Tips", value: `$${(data.totalTips ?? 0).toFixed(2)}` },
+          ],
+          tables: [
+            {
+              title: "Daily Trend",
+              headers: ["Date", "Revenue", "Appointments", "Cancel Fees"],
+              rows: (data.dailyTrend ?? []).map(r => [r.date, `$${r.revenue.toFixed(2)}`, String(r.appointments), `$${r.cancelFees.toFixed(2)}`]),
+            },
+            {
+              title: "Staff Performance",
+              headers: ["Name", "Appointments", "Revenue", "Tips", "Rating"],
+              rows: (data.staffPerformance ?? []).map(s => [s.name, String(s.appointments), `$${s.revenue.toFixed(2)}`, `$${(s.tips ?? 0).toFixed(2)}`, s.avgRating?.toFixed(1) ?? "N/A"]),
+            },
+          ],
+        });
+      }
+    } else if (activeTab === "stylist") {
+      try {
+        const r = await fetch(`/api/analytics/stylist-productivity?locationId=${locationId}&from=${startDate}&to=${endDate}`, { headers });
+        if (!r.ok) throw new Error("Failed to fetch stylist data");
+        const stylists = await r.json();
+        if (format === "csv") {
+          exportStylistCSV(stylists, dateLabel);
+        } else {
+          await generatePdfReport({
+            brandName: locName,
+            reportTitle: "Stylist Productivity",
+            dateRange: `${startDate} — ${endDate}`,
+            tables: [{
+              title: "Stylist Performance",
+              headers: ["Name", "Total Appts", "Completed", "Revenue", "Avg Ticket", "Cancel %", "No-Show %"],
+              rows: stylists.map((s: any) => [s.name, String(s.totalAppointments), String(s.completedAppointments), `$${s.revenue.toFixed(2)}`, `$${s.avgTicket.toFixed(2)}`, `${s.cancellationRate.toFixed(1)}%`, `${s.noShowRate.toFixed(1)}%`]),
+            }],
+          });
+        }
+        toast.success(`Stylist report exported as ${format.toUpperCase()}`);
+      } catch (e: any) { toast.error(e?.message ?? "Export failed"); }
+    } else if (activeTab === "chair") {
+      try {
+        const r = await fetch(`/api/analytics/revenue-per-chair?locationId=${locationId}&from=${startDate}&to=${endDate}`, { headers });
+        if (!r.ok) throw new Error("Failed to fetch chair data");
+        const chairs = await r.json();
+        if (format === "csv") {
+          exportChairCSV(chairs, dateLabel);
+        } else {
+          await generatePdfReport({
+            brandName: locName,
+            reportTitle: "Revenue Per Chair",
+            dateRange: `${startDate} — ${endDate}`,
+            tables: [{
+              title: "Chair Utilization",
+              headers: ["Staff", "Revenue", "Appointments", "Booked Min", "Available Min", "Utilization"],
+              rows: chairs.map((c: any) => [c.name, `$${c.revenue.toFixed(2)}`, String(c.appointmentCount), String(c.bookedMinutes), String(c.availableMinutes), `${c.utilizationPct.toFixed(1)}%`]),
+            }],
+          });
+        }
+        toast.success(`Chair report exported as ${format.toUpperCase()}`);
+      } catch (e: any) { toast.error(e?.message ?? "Export failed"); }
+    } else if (activeTab === "retail") {
+      try {
+        const r = await fetch(`/api/analytics/retail-sales?locationId=${locationId}&from=${startDate}&to=${endDate}`, { headers });
+        if (!r.ok) throw new Error("Failed to fetch retail data");
+        const retail = await r.json();
+        if (format === "csv") {
+          exportRetailCSV(retail.services ?? [], dateLabel);
+        } else {
+          await generatePdfReport({
+            brandName: locName,
+            reportTitle: "Retail Sales Report",
+            dateRange: `${startDate} — ${endDate}`,
+            kpis: [
+              { label: "Total Revenue", value: `$${(retail.totalRevenue ?? 0).toFixed(2)}` },
+              { label: "Total Qty Sold", value: String(retail.totalQty ?? 0) },
+            ],
+            tables: [{
+              title: "Services",
+              headers: ["Service", "Category", "Price", "Qty", "Revenue"],
+              rows: (retail.services ?? []).map((s: any) => [s.name, s.category, `$${s.unitPrice.toFixed(2)}`, String(s.qty), `$${s.revenue.toFixed(2)}`]),
+            }],
+          });
+        }
+        toast.success(`Retail report exported as ${format.toUpperCase()}`);
+      } catch (e: any) { toast.error(e?.message ?? "Export failed"); }
+    } else if (activeTab === "multi") {
+      try {
+        const r = await fetch(`/api/analytics/multi-location?from=${startDate}&to=${endDate}`, { headers });
+        if (!r.ok) throw new Error("Failed to fetch location data");
+        const locs = await r.json();
+        if (format === "csv") {
+          exportMultiLocationCSV(locs, dateLabel);
+        } else {
+          await generatePdfReport({
+            brandName: "SalonSync",
+            reportTitle: "Multi-Location Report",
+            dateRange: `${startDate} — ${endDate}`,
+            tables: [{
+              title: "Location Performance",
+              headers: ["Location", "Revenue", "Appointments", "Cancel %", "No-Shows", "Rating"],
+              rows: locs.map((l: any) => [l.name, `$${l.revenue.toFixed(2)}`, String(l.appointments), `${l.cancellationRate.toFixed(1)}%`, String(l.noShows), l.avgRating ? l.avgRating.toFixed(1) : "N/A"]),
+            }],
+          });
+        }
+        toast.success(`Multi-location report exported as ${format.toUpperCase()}`);
+      } catch (e: any) { toast.error(e?.message ?? "Export failed"); }
+    }
+  }
+
   return (
     <DashboardLayout>
       {/* Header */}
@@ -989,7 +1138,7 @@ export function Analytics() {
           useCustom={useCustom} setUseCustom={setUseCustom}
           customStart={customStart} setCustomStart={setCustomStart}
           customEnd={customEnd}   setCustomEnd={setCustomEnd}
-          onExport={() => data && exportCSV(data, locationId)}
+          onExport={(format) => handleExport(format)}
           canExport={!!data}
         />
       </div>
