@@ -2,6 +2,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { useListUsers, useListReviews, useListAppointments } from "@workspace/api-client-react";
 import { Star, UserPlus, Calendar, TrendingUp, Clock } from "lucide-react";
 
@@ -94,7 +95,9 @@ export function AdminStaff() {
                   </div>
 
                   <div className="px-6 py-4 border-t border-white/5 flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 text-xs">View Schedule</Button>
+                    <Link href={`/admin/schedule?staffId=${member.id}`} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full text-xs">View Schedule</Button>
+                    </Link>
                     <Button variant="ghost" size="sm" className="flex-1 text-xs">Edit</Button>
                   </div>
                 </CardContent>

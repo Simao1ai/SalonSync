@@ -3,9 +3,10 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 
 const ROLES = [
-  { label: "Admin",  value: "ADMIN",  path: "/admin/dashboard",  color: "bg-rose-500 hover:bg-rose-400" },
-  { label: "Staff",  value: "STAFF",  path: "/staff/dashboard",  color: "bg-amber-500 hover:bg-amber-400" },
-  { label: "Client", value: "CLIENT", path: "/client/dashboard", color: "bg-sky-500 hover:bg-sky-400" },
+  { label: "Super Admin", value: "SUPER_ADMIN", path: "/platform/dashboard", color: "bg-violet-600 hover:bg-violet-500" },
+  { label: "Admin",       value: "ADMIN",       path: "/admin/dashboard",    color: "bg-rose-500 hover:bg-rose-400" },
+  { label: "Staff",       value: "STAFF",       path: "/staff/dashboard",    color: "bg-amber-500 hover:bg-amber-400" },
+  { label: "Client",      value: "CLIENT",      path: "/client/dashboard",   color: "bg-sky-500 hover:bg-sky-400" },
 ] as const;
 
 function DevSwitcherInner() {

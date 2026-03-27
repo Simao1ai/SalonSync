@@ -17,7 +17,7 @@ export function AdminServices() {
   );
 
   const avgPrice = services && services.length > 0
-    ? services.reduce((sum, s) => sum + parseFloat(s.price), 0) / services.length
+    ? services.reduce((sum, s) => sum + (Number(s.price) || 0), 0) / services.length
     : 0;
 
   const highValue = services?.filter(s => s.requiresDeposit) ?? [];
@@ -115,9 +115,9 @@ export function AdminServices() {
                   <span className="text-sm">{service.durationMinutes} min</span>
                 </div>
                 <div>
-                  <p className="font-bold text-lg">{formatCurrency(parseFloat(service.price))}</p>
+                  <p className="font-bold text-lg">{formatCurrency(service.price)}</p>
                   {service.requiresDeposit && service.depositAmount && (
-                    <p className="text-xs text-muted-foreground">{formatCurrency(parseFloat(service.depositAmount))} deposit</p>
+                    <p className="text-xs text-muted-foreground">{formatCurrency(service.depositAmount)} deposit</p>
                   )}
                 </div>
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

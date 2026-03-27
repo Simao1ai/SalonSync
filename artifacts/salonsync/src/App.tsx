@@ -28,6 +28,12 @@ import { ClientProfile } from "@/pages/client/ClientProfile";
 import { ClientMessages } from "@/pages/client/ClientMessages";
 import { ClientWaitlist } from "@/pages/client/ClientWaitlist";
 
+import { PlatformDashboard } from "@/pages/platform/PlatformDashboard";
+import { PlatformTenants } from "@/pages/platform/PlatformTenants";
+import { PlatformUsers } from "@/pages/platform/PlatformUsers";
+import { PlatformAnalytics } from "@/pages/platform/PlatformAnalytics";
+import { PlatformSupport } from "@/pages/platform/PlatformSupport";
+
 import { SetupAdmin } from "@/pages/SetupAdmin";
 import { DevSwitcher } from "@/components/DevSwitcher";
 
@@ -70,6 +76,13 @@ function Router() {
       <Route path="/client/profile" component={ClientProfile} />
       <Route path="/client/messages" component={ClientMessages} />
       <Route path="/client/waitlist" component={ClientWaitlist} />
+
+      {/* Platform Admin */}
+      <Route path="/platform/dashboard" component={PlatformDashboard} />
+      <Route path="/platform/tenants" component={PlatformTenants} />
+      <Route path="/platform/users" component={PlatformUsers} />
+      <Route path="/platform/analytics" component={PlatformAnalytics} />
+      <Route path="/platform/support" component={PlatformSupport} />
 
       <Route path="/setup-admin" component={SetupAdmin} />
       <Route component={NotFound} />

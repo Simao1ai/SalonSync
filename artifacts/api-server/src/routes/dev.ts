@@ -12,10 +12,11 @@ import {
 
 const router: IRouter = Router();
 
-const VALID_ROLES = ["ADMIN", "STAFF", "CLIENT"] as const;
+const VALID_ROLES = ["SUPER_ADMIN", "ADMIN", "STAFF", "CLIENT"] as const;
 type Role = (typeof VALID_ROLES)[number];
 
 const DEV_REDIRECT: Record<Role, string> = {
+  SUPER_ADMIN: "/platform/dashboard",
   ADMIN: "/admin/dashboard",
   STAFF: "/staff/dashboard",
   CLIENT: "/client/dashboard",
@@ -43,6 +44,7 @@ router.get("/dev/login", async (req: Request, res: Response) => {
 
   // Map roles to the seeded demo users
   const DEV_USER_ID: Record<Role, string> = {
+    SUPER_ADMIN: "seed-superadmin-001",
     ADMIN:  "seed-admin-001",
     STAFF:  "seed-staff-001",
     CLIENT: "seed-client-001",

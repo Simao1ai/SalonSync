@@ -20,6 +20,7 @@ import tipsRouter from "./tips";
 import exploreRouter from "./explore";
 import scheduleRouter from "./schedule";
 import analyticsExtendedRouter from "./analytics-extended";
+import platformRouter from "./platform";
 
 const router: IRouter = Router();
 
@@ -44,5 +45,6 @@ router.use(tipsRouter);
 router.use(exploreRouter);
 router.use(scheduleRouter);
 router.use(analyticsExtendedRouter);
+router.use(platformRouter);
 
 export default router;
