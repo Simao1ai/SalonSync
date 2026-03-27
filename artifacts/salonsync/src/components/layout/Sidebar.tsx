@@ -22,11 +22,15 @@ import {
   X,
   FileText,
   Megaphone,
+  ShoppingBag,
+  Zap,
 } from "lucide-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useListNotifications } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { useBranding } from "@/contexts/BrandingContext";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { useTranslation } from "react-i18next";
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -39,6 +43,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const role = user?.role || "CLIENT";
   const [collapsed, setCollapsed] = useState(false);
   const branding = useBranding();
+  const { t } = useTranslation();
 
   const { data: notifications } = useListNotifications({ userId: user?.id });
   const unreadCount = notifications?.filter((n: { isRead: boolean }) => !n.isRead).length ?? 0;
@@ -58,34 +63,37 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const unreadMessages = unreadMsgData?.count ?? 0;
 
   const adminLinks = [
-    { href: "/admin/dashboard",    label: "Dashboard",       icon: LayoutDashboard },
-    { href: "/admin/appointments", label: "Appointments",    icon: Calendar },
-    { href: "/admin/calendar",     label: "Calendar",        icon: CalendarRange },
-    { href: "/admin/schedule",     label: "Schedule",        icon: LayoutGrid },
-    { href: "/admin/staff",        label: "Staff",           icon: Users },
-    { href: "/admin/services",     label: "Services",        icon: Scissors },
-    { href: "/admin/waitlist",     label: "Waitlist",        icon: ClipboardList },
-    { href: "/admin/analytics",    label: "Analytics",       icon: BarChart3 },
-    { href: "/admin/intake-forms", label: "Intake Forms",    icon: FileText },
-    { href: "/admin/marketing",    label: "Marketing",       icon: Megaphone },
-    { href: "/admin/settings",     label: "Settings",        icon: Settings },
+    { href: "/admin/dashboard",    label: t("nav.dashboard"),       icon: LayoutDashboard },
+    { href: "/admin/appointments", label: t("nav.appointments"),    icon: Calendar },
+    { href: "/admin/calendar",     label: t("nav.calendar"),        icon: CalendarRange },
+    { href: "/admin/schedule",     label: t("nav.schedule"),        icon: LayoutGrid },
+    { href: "/admin/staff",        label: t("nav.staff"),           icon: Users },
+    { href: "/admin/services",     label: t("nav.services"),        icon: Scissors },
+    { href: "/admin/waitlist",     label: t("nav.waitlist"),        icon: ClipboardList },
+    { href: "/admin/analytics",    label: t("nav.analytics"),       icon: BarChart3 },
+    { href: "/admin/intake-forms", label: t("nav.intakeForms"),     icon: FileText },
+    { href: "/admin/marketing",    label: t("nav.marketing"),       icon: Megaphone },
+    { href: "/admin/store",        label: t("nav.store"),           icon: ShoppingBag },
+    { href: "/admin/webhooks",     label: t("nav.webhooks"),        icon: Zap },
+    { href: "/admin/settings",     label: t("nav.settings"),        icon: Settings },
   ];
 
   const staffLinks = [
-    { href: "/staff/dashboard", label: "My Schedule", icon: LayoutDashboard },
-    { href: "/staff/clients",   label: "My Clients",  icon: Users },
-    { href: "/staff/earnings",  label: "Earnings",    icon: DollarSign },
-    { href: "/staff/messages",  label: "Messages",    icon: MessageSquare, badge: unreadMessages },
-    { href: "/staff/settings",  label: "Settings",    icon: Settings },
+    { href: "/staff/dashboard", label: t("nav.mySchedule"), icon: LayoutDashboard },
+    { href: "/staff/clients",   label: t("nav.myClients"),  icon: Users },
+    { href: "/staff/earnings",  label: t("nav.earnings"),    icon: DollarSign },
+    { href: "/staff/messages",  label: t("nav.messages"),    icon: MessageSquare, badge: unreadMessages },
+    { href: "/staff/settings",  label: t("nav.settings"),    icon: Settings },
   ];
 
   const clientLinks = [
-    { href: "/client/dashboard", label: "My Dashboard",     icon: LayoutDashboard },
-    { href: "/client/book",      label: "Book Appointment", icon: Calendar },
-    { href: "/client/waitlist",  label: "My Waitlist",      icon: ClipboardList },
-    { href: "/client/reviews",   label: "My Reviews",       icon: Star },
-    { href: "/client/messages",  label: "Messages",         icon: MessageSquare, badge: unreadMessages },
-    { href: "/client/profile",   label: "Profile",          icon: UserCircle, badge: unreadCount },
+    { href: "/client/dashboard", label: t("nav.myDashboard"),     icon: LayoutDashboard },
+    { href: "/client/book",      label: t("nav.bookAppointment"), icon: Calendar },
+    { href: "/client/waitlist",  label: t("nav.myWaitlist"),      icon: ClipboardList },
+    { href: "/client/store",     label: t("nav.store"),           icon: ShoppingBag },
+    { href: "/client/reviews",   label: t("nav.myReviews"),       icon: Star },
+    { href: "/client/messages",  label: t("nav.messages"),        icon: MessageSquare, badge: unreadMessages },
+    { href: "/client/profile",   label: t("nav.profile"),         icon: UserCircle, badge: unreadCount },
   ];
 
   const links = role === "ADMIN" ? adminLinks : role === "STAFF" ? staffLinks : clientLinks;
@@ -186,6 +194,11 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
 
       {/* Bottom: user + collapse */}
       <div className="border-t border-white/[0.06] p-2 shrink-0 space-y-1">
+        {(mobile || !collapsed) && (
+          <div className="flex justify-end px-2 py-1">
+            <LanguageSelector />
+          </div>
+        )}
         <div
           title={(!mobile && collapsed) ? fullName : undefined}
           className={cn(
@@ -215,7 +228,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
           )}
         >
           <LogOut className="w-[18px] h-[18px] shrink-0 group-hover:-translate-x-0.5 transition-transform duration-150" />
-          {(mobile || !collapsed) && <span className="text-sm font-medium">Sign Out</span>}
+          {(mobile || !collapsed) && <span className="text-sm font-medium">{t("nav.signOut")}</span>}
         </button>
 
         {/* Collapse toggle — desktop only */}
@@ -230,7 +243,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
           >
             {collapsed
               ? <PanelLeft className="w-[18px] h-[18px] shrink-0" />
-              : <><PanelLeftClose className="w-[18px] h-[18px] shrink-0" /><span className="text-sm font-medium">Collapse</span></>
+              : <><PanelLeftClose className="w-[18px] h-[18px] shrink-0" /><span className="text-sm font-medium">{t("nav.collapse")}</span></>
             }
           </button>
         )}

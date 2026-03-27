@@ -26,6 +26,8 @@ import intakeFormsRouter from "./intake-forms";
 import aiPhase2Router from "./ai-phase2";
 import socialBookingRouter from "./social-booking";
 import reserveRouter from "./reserve";
+import webhooksRouter from "./webhooks";
+import storeRouter from "./store";
 
 const router: IRouter = Router();
 
@@ -56,5 +58,7 @@ router.use(intakeFormsRouter);
 router.use(aiPhase2Router);
 router.use(socialBookingRouter);
 router.use(reserveRouter);
+router.use(webhooksRouter);
+router.use(storeRouter);
 
 export default router;

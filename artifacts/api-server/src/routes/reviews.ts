@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { reviewsTable, appointmentsTable, usersTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { CreateReviewBody, ListReviewsQueryParams } from "@workspace/api-zod";
+import { fireWebhooks } from "../services/webhook-dispatcher";
 
 const router: IRouter = Router();
 
@@ -52,6 +53,14 @@ router.post("/reviews", async (req, res) => {
     ...body,
     isPublished: false,
   }).returning();
+
+  fireWebhooks("review.created", appointment.locationId, {
+    reviewId: review.id,
+    rating: body.rating,
+    comment: body.comment,
+    clientId: body.clientId,
+    staffId: body.staffId,
+  }).catch(() => {});
 
   // Trigger sentiment analysis async
   fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:" + process.env.PORT}/api/ai/sentiment`, {

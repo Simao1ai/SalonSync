@@ -11,6 +11,7 @@ import {
   waitlistTable,
 } from "@workspace/db/schema";
 import { eq, and, gte, lte, sql, isNull } from "drizzle-orm";
+import { fireWebhooks } from "../services/webhook-dispatcher";
 import {
   CreateAppointmentBody,
   UpdateAppointmentBody,
@@ -131,6 +132,15 @@ router.post("/appointments", async (req, res) => {
       }))
     );
   }
+
+  fireWebhooks("appointment.created", body.locationId, {
+    appointmentId: appointment.id,
+    clientId: body.clientId,
+    staffId: body.staffId,
+    startTime: appointment.startTime,
+    totalPrice,
+    services: services.map(s => s.name),
+  }).catch(() => {});
 
   // Auto-create a direct message thread linking staff ↔ client for this appointment
   db.select()
@@ -281,6 +291,14 @@ router.post("/appointments/:id/cancel", async (req, res) => {
     })
     .where(eq(appointmentsTable.id, req.params.id))
     .returning();
+
+  fireWebhooks("appointment.cancelled", appointment.locationId, {
+    appointmentId: appointment.id,
+    clientId: appointment.clientId,
+    staffId: appointment.staffId,
+    reason: body.reason,
+    feeCharged,
+  }).catch(() => {});
 
   // Send cancellation notice to client and staff (async, don't block)
   getAppointmentWithDetails(cancelled.id).then(details => {

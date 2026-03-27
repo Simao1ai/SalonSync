@@ -1,6 +1,7 @@
 import {
   boolean,
   doublePrecision,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -9,6 +10,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { servicesTable } from "./services";
+import { locationsTable } from "./locations";
 
 export const productsTable = pgTable("products", {
   id: varchar("id", { length: 128 })
@@ -19,6 +21,10 @@ export const productsTable = pgTable("products", {
   price: doublePrecision("price").notNull(),
   imageUrl: varchar("image_url"),
   inStock: boolean("in_stock").default(true),
+  locationId: varchar("location_id", { length: 128 }).references(() => locationsTable.id),
+  category: varchar("category", { length: 100 }),
+  sku: varchar("sku", { length: 100 }),
+  quantity: integer("quantity").default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

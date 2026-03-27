@@ -1,0 +1,43 @@
+{
+  "name": "SalonSync",
+  "short_name": "SalonSync",
+  "description": "Premium salon management platform — book appointments, manage staff, and grow your business.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09101E",
+  "theme_color": "#C9956A",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "lifestyle"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Book Appointment",
+      "url": "/client/book",
+      "description": "Book a new appointment"
+    },
+    {
+      "name": "My Dashboard",
+      "url": "/client/dashboard",
+      "description": "View your appointments"
+    },
+    {
+      "name": "Explore Salons",
+      "url": "/explore",
+      "description": "Browse salons in the marketplace"
+    }
+  ]
+}

@@ -25,6 +25,7 @@ Key architectural decisions include:
 - **Platform Super Admin:** A dedicated interface for super administrators to manage tenants, users, announcements, and subscriptions across the entire platform, including user impersonation for support.
 - **AI Superpowers (Phase 2):** AI Schedule Optimizer, AI Marketing Campaign Generator, AI Business Insights (NL→SQL), AI Churn Prediction, AI Smart Pricing — all implemented with security hardening.
 - **Marketplace & Growth (Phase 3):** Enhanced public marketplace with geolocation search, salon detail pages, gallery carousels, staff profiles, verified reviews with sentiment badges, JSON-LD structured data. Social media booking link generator with click/booking tracking. Google Reserve availability/service feeds.
+- **Polish & Differentiation (Phase 5):** PWA support (manifest, service worker, push notifications, Add to Home Screen). Multi-language i18n (English/Spanish via react-i18next, language selector in sidebar). Webhook/Zapier integration (CRUD API, HMAC-signed payloads, event firing on appointments/reviews/payments, SSRF-safe URL validation). E-commerce product store (admin product CRUD with categories/SKU/inventory, client storefront with cart/checkout/order history, stock tracking). 31 DB tables total.
 
 ## External Dependencies
 

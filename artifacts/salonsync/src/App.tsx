@@ -15,6 +15,8 @@ import { AdminWaitlist } from "@/pages/admin/AdminWaitlist";
 import { AdminSchedule } from "@/pages/admin/AdminSchedule";
 import { IntakeFormBuilder } from "@/pages/admin/IntakeFormBuilder";
 import { Marketing } from "@/pages/admin/Marketing";
+import { AdminStore } from "@/pages/admin/Store";
+import { AdminWebhooks } from "@/pages/admin/Webhooks";
 
 import { Explore } from "@/pages/Explore";
 import { SalonDetail } from "@/pages/SalonDetail";
@@ -31,6 +33,7 @@ import { ClientReviews } from "@/pages/client/ClientReviews";
 import { ClientProfile } from "@/pages/client/ClientProfile";
 import { ClientMessages } from "@/pages/client/ClientMessages";
 import { ClientWaitlist } from "@/pages/client/ClientWaitlist";
+import { ClientStore } from "@/pages/client/ClientStore";
 
 import { PlatformDashboard } from "@/pages/platform/PlatformDashboard";
 import { PlatformTenants } from "@/pages/platform/PlatformTenants";
@@ -73,6 +76,8 @@ function Router() {
       <Route path="/admin/schedule" component={AdminSchedule} />
       <Route path="/admin/intake-forms" component={IntakeFormBuilder} />
       <Route path="/admin/marketing" component={Marketing} />
+      <Route path="/admin/store" component={AdminStore} />
+      <Route path="/admin/webhooks" component={AdminWebhooks} />
 
       {/* Staff */}
       <Route path="/staff/dashboard" component={StaffDashboard} />
@@ -88,6 +93,7 @@ function Router() {
       <Route path="/client/profile" component={ClientProfile} />
       <Route path="/client/messages" component={ClientMessages} />
       <Route path="/client/waitlist" component={ClientWaitlist} />
+      <Route path="/client/store" component={ClientStore} />
 
       {/* Platform Admin */}
       <Route path="/platform/dashboard" component={PlatformDashboard} />
