@@ -16,8 +16,9 @@ declare global {
 
     interface Request {
       isAuthenticated(): this is AuthedRequest;
-
       user?: User | undefined;
+      isImpersonating?: boolean;
+      impersonatorSid?: string;
     }
 
     export interface AuthedRequest {
@@ -83,5 +84,7 @@ export async function authMiddleware(
   }
 
   req.user = refreshed.user;
+  req.isImpersonating = !!refreshed.impersonatorSid;
+  req.impersonatorSid = refreshed.impersonatorSid;
   next();
 }

@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { PlatformLayout } from "@/components/layout/PlatformLayout";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   Users, Search, Shield, Scissors, UserCircle,
-  ShieldCheck, ChevronDown, ChevronUp, Building2,
+  ShieldCheck, ChevronDown, ChevronUp, Building2, Eye,
 } from "lucide-react";
+import { toast } from "sonner";
 
 function getAuthHeaders() {
   const sid = sessionStorage.getItem("__salonsync_dev_sid__");
@@ -39,6 +41,7 @@ export function PlatformUsers() {
   const [roleFilter, setRoleFilter] = useState("All");
   const [sortBy, setSortBy] = useState<"name" | "role" | "createdAt">("createdAt");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+  const [impersonating, setImpersonating] = useState<string | null>(null);
 
   const filtered = (users ?? [])
     .filter((u: any) => {
@@ -67,6 +70,28 @@ export function PlatformUsers() {
     return sortDir === "desc" ? <ChevronDown className="w-3 h-3 text-violet-400" /> : <ChevronUp className="w-3 h-3 text-violet-400" />;
   }
 
+  async function handleImpersonate(userId: string) {
+    setImpersonating(userId);
+    try {
+      const r = await fetch(`/api/platform/impersonate/${userId}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { ...getAuthHeaders() },
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        toast.error(data.error || "Failed to impersonate");
+        return;
+      }
+      toast.success(`Now viewing as ${data.user.firstName || data.user.email}`);
+      window.location.href = data.redirectTo || "/";
+    } catch {
+      toast.error("Failed to impersonate user");
+    } finally {
+      setImpersonating(null);
+    }
+  }
+
   const counts = (users ?? []).reduce((acc: any, u: any) => {
     acc[u.role] = (acc[u.role] ?? 0) + 1;
     return acc;
@@ -79,7 +104,6 @@ export function PlatformUsers() {
         <p className="text-white/40 mt-1">All users across every salon on the platform</p>
       </div>
 
-      {/* Role summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
           { role: "ADMIN",  label: "Admins",  icon: Shield,      color: "text-primary",    bg: "bg-primary/10" },
@@ -133,12 +157,12 @@ export function PlatformUsers() {
           </div>
         </CardHeader>
 
-        {/* Table header */}
-        <div className="hidden md:grid grid-cols-[2fr_1fr_1.5fr_1fr] gap-4 px-6 py-3 border-b border-white/5 text-xs font-semibold text-white/30 uppercase tracking-wider">
+        <div className="hidden md:grid grid-cols-[2fr_1fr_1.5fr_1fr_80px] gap-4 px-6 py-3 border-b border-white/5 text-xs font-semibold text-white/30 uppercase tracking-wider">
           <button className="text-left flex items-center gap-1.5" onClick={() => toggleSort("name")}>User <SortIcon col="name" /></button>
           <button className="flex items-center gap-1.5" onClick={() => toggleSort("role")}>Role <SortIcon col="role" /></button>
           <span>Salon</span>
           <button className="text-right flex items-center justify-end gap-1.5" onClick={() => toggleSort("createdAt")}>Joined <SortIcon col="createdAt" /></button>
+          <span className="text-center">Actions</span>
         </div>
 
         <div className="divide-y divide-white/5">
@@ -149,14 +173,14 @@ export function PlatformUsers() {
               const initials = [user.firstName?.charAt(0), user.lastName?.charAt(0)].filter(Boolean).join("") || user.email?.charAt(0)?.toUpperCase() || "?";
               return (
                 <div key={user.id} className="px-6 py-3.5 hover:bg-white/[0.02] transition-colors">
-                  <div className="flex items-center justify-between md:grid md:grid-cols-[2fr_1fr_1.5fr_1fr] gap-4">
+                  <div className="flex items-center justify-between md:grid md:grid-cols-[2fr_1fr_1.5fr_1fr_80px] gap-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-300 text-xs font-bold shrink-0">
                         {initials}
                       </div>
                       <div>
                         <p className="text-sm font-medium text-white">
-                          {[user.firstName, user.lastName].filter(Boolean).join(" ") || "—"}
+                          {[user.firstName, user.lastName].filter(Boolean).join(" ") || "\u2014"}
                         </p>
                         <p className="text-xs text-white/40">{user.email}</p>
                       </div>
@@ -170,12 +194,21 @@ export function PlatformUsers() {
                     <div className="hidden md:flex items-center gap-1.5 text-xs text-white/50">
                       {user.locationName
                         ? <><Building2 className="w-3 h-3" /> {user.locationName}</>
-                        : <span className="text-white/20">—</span>}
+                        : <span className="text-white/20">\u2014</span>}
                     </div>
                     <p className="text-xs text-white/40 text-right hidden md:block">
-                      {user.createdAt ? format(new Date(user.createdAt), "MMM d, yyyy") : "—"}
+                      {user.createdAt ? format(new Date(user.createdAt), "MMM d, yyyy") : "\u2014"}
                     </p>
-                    {/* Mobile role badge */}
+                    <div className="flex items-center justify-center">
+                      <button
+                        onClick={() => handleImpersonate(user.id)}
+                        disabled={impersonating === user.id}
+                        title="Login as this user"
+                        className="p-1.5 rounded-lg hover:bg-amber-500/10 text-white/30 hover:text-amber-400 transition-colors disabled:opacity-50"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
                     <span className={`md:hidden inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${meta.color}`}>
                       {meta.label}
                     </span>

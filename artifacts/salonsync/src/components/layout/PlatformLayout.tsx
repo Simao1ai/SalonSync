@@ -19,19 +19,21 @@ import {
 import { Loader2 } from "lucide-react";
 
 const navLinks = [
-  { href: "/platform/dashboard",  label: "Overview",    icon: LayoutDashboard },
-  { href: "/platform/tenants",    label: "Salons",      icon: Building2 },
-  { href: "/platform/users",      label: "Users",       icon: Users },
-  { href: "/platform/analytics",  label: "Analytics",   icon: BarChart3 },
-  { href: "/platform/support",    label: "Support",     icon: Headphones },
+  { href: "/platform/dashboard",      label: "Overview",       icon: LayoutDashboard },
+  { href: "/platform/tenants",        label: "Salons",         icon: Building2 },
+  { href: "/platform/users",          label: "Users",          icon: Users },
+  { href: "/platform/announcements",  label: "Announcements",  icon: Bell },
+  { href: "/platform/analytics",      label: "Analytics",      icon: BarChart3 },
+  { href: "/platform/support",        label: "Support",        icon: Headphones },
 ];
 
 const ROUTE_META: Record<string, string> = {
-  "/platform/dashboard": "Platform Overview",
-  "/platform/tenants":   "Salon Management",
-  "/platform/users":     "User Management",
-  "/platform/analytics": "Platform Analytics",
-  "/platform/support":   "Support & Activity",
+  "/platform/dashboard":     "Platform Overview",
+  "/platform/tenants":       "Salon Management",
+  "/platform/users":         "User Management",
+  "/platform/announcements": "Announcements",
+  "/platform/analytics":     "Platform Analytics",
+  "/platform/support":       "Support & Activity",
 };
 
 function PlatformSidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {

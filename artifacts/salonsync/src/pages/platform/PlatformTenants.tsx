@@ -7,8 +7,8 @@ import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import {
   Building2, MapPin, Users, Calendar, DollarSign,
-  Star, Scissors, Search, TrendingUp, MoreVertical,
-  CheckCircle2, XCircle, ChevronDown, ChevronUp,
+  Star, Search, ChevronDown, ChevronUp,
+  CheckCircle2, X, Plus, CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,12 +28,111 @@ function useTenants() {
   });
 }
 
+const PLAN_COLORS: Record<string, string> = {
+  free: "text-white/40 bg-white/5",
+  starter: "text-blue-400 bg-blue-500/10",
+  professional: "text-violet-400 bg-violet-500/10",
+  enterprise: "text-amber-400 bg-amber-500/10",
+};
+
+function CreateSalonModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const queryClient = useQueryClient();
+
+  if (!open) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSubmitting(true);
+    try {
+      const r = await fetch("/api/platform/tenants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ name, address, phone, email }),
+      });
+      if (!r.ok) throw new Error("Failed");
+      toast.success("Salon created successfully");
+      queryClient.invalidateQueries({ queryKey: ["platform-tenants"] });
+      onClose();
+      setName(""); setAddress(""); setPhone(""); setEmail("");
+    } catch {
+      toast.error("Failed to create salon");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-[#111827] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-display font-bold text-white">Create New Salon</h2>
+          <button onClick={onClose} className="text-white/40 hover:text-white">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-white/60 block mb-1.5">Salon Name *</label>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Luxe Hair Studio"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+              required
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-white/60 block mb-1.5">Address</label>
+            <input
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              placeholder="123 Main St, City, State"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-white/60 block mb-1.5">Phone</label>
+              <input
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="(555) 123-4567"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-white/60 block mb-1.5">Email</label>
+              <input
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                type="email"
+                placeholder="info@salon.com"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+              />
+            </div>
+          </div>
+          <Button type="submit" disabled={submitting || !name.trim()} className="w-full bg-violet-600 hover:bg-violet-700 mt-2">
+            {submitting ? "Creating..." : "Create Salon"}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function PlatformTenants() {
   const { data: tenants, isLoading } = useTenants();
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"revenue" | "appointments" | "rating" | "name">("revenue");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
-  const queryClient = useQueryClient();
+  const [showCreate, setShowCreate] = useState(false);
 
   const filtered = (tenants ?? [])
     .filter((t: any) => !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.city?.toLowerCase().includes(search.toLowerCase()))
@@ -64,12 +163,13 @@ export function PlatformTenants() {
           <h1 className="text-3xl font-display font-bold text-white">Salon Management</h1>
           <p className="text-white/40 mt-1">All salon locations across the SalonSync network</p>
         </div>
-        <Button className="bg-violet-600 hover:bg-violet-700 gap-2">
-          <Building2 className="w-4 h-4" /> Add Salon
+        <Button onClick={() => setShowCreate(true)} className="bg-violet-600 hover:bg-violet-700 gap-2">
+          <Plus className="w-4 h-4" /> Add Salon
         </Button>
       </div>
 
-      {/* Summary row */}
+      <CreateSalonModal open={showCreate} onClose={() => setShowCreate(false)} />
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
           { label: "Total Salons", value: tenants?.length ?? 0, icon: Building2, color: "text-violet-400" },
@@ -104,76 +204,78 @@ export function PlatformTenants() {
           </div>
         </CardHeader>
 
-        {/* Table header */}
-        <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_80px] gap-4 px-6 py-3 border-b border-white/5 text-xs font-semibold text-white/30 uppercase tracking-wider">
+        <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] gap-4 px-6 py-3 border-b border-white/5 text-xs font-semibold text-white/30 uppercase tracking-wider">
           <button className="text-left flex items-center gap-1.5" onClick={() => toggleSort("name")}>Salon <SortIcon col="name" /></button>
           <button className="text-right flex items-center justify-end gap-1.5" onClick={() => toggleSort("revenue")}>Revenue <SortIcon col="revenue" /></button>
           <button className="text-right flex items-center justify-end gap-1.5" onClick={() => toggleSort("appointments")}>Apts <SortIcon col="appointments" /></button>
           <button className="text-right flex items-center justify-end gap-1.5" onClick={() => toggleSort("rating")}>Rating <SortIcon col="rating" /></button>
-          <span className="text-right">Last Activity</span>
+          <span className="text-center">Plan</span>
           <span className="text-right">Status</span>
         </div>
 
         <div className="divide-y divide-white/5">
           {isLoading
             ? Array.from({length: 3}).map((_, i) => <div key={i} className="p-6 animate-pulse h-20 bg-white/[0.01]" />)
-            : filtered.map((tenant: any) => (
-              <div key={tenant.id} className="px-6 py-4 hover:bg-white/[0.02] transition-colors">
-                {/* Mobile layout */}
-                <div className="flex items-start justify-between md:hidden gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400 text-lg font-bold shrink-0">
-                      {tenant.name.charAt(0)}
+            : filtered.map((tenant: any) => {
+              const plan = tenant.subscription?.plan ?? "free";
+              return (
+                <div key={tenant.id} className="px-6 py-4 hover:bg-white/[0.02] transition-colors">
+                  <div className="flex items-start justify-between md:hidden gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400 text-lg font-bold shrink-0">
+                        {tenant.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white">{tenant.name}</p>
+                        <p className="text-xs text-white/40">{tenant.city}, {tenant.state}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-white">{tenant.name}</p>
-                      <p className="text-xs text-white/40">{tenant.city}, {tenant.state}</p>
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
-                    <CheckCircle2 className="w-3 h-3" /> Active
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-4 mt-3 md:hidden text-sm text-white/60">
-                  <span className="flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> {formatCurrency(tenant.revenue)}</span>
-                  <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {tenant.appointments} apts</span>
-                  <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 text-yellow-400" /> {tenant.avgRating}</span>
-                  <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {tenant.staff} staff</span>
-                </div>
-
-                {/* Desktop layout */}
-                <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_80px] gap-4 items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400 font-bold shrink-0">
-                      {tenant.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white text-sm">{tenant.name}</p>
-                      <p className="text-xs text-white/40 flex items-center gap-1">
-                        <MapPin className="w-3 h-3" /> {tenant.city}, {tenant.state}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-right font-semibold text-emerald-400 text-sm">{formatCurrency(tenant.revenue)}</p>
-                  <div className="text-right">
-                    <p className="font-semibold text-white text-sm">{tenant.appointments}</p>
-                    <p className="text-xs text-white/30">{tenant.staff} staff · {tenant.clients} clients</p>
-                  </div>
-                  <div className="text-right flex items-center justify-end gap-1">
-                    <Star className="w-3.5 h-3.5 text-yellow-400" />
-                    <span className="font-semibold text-white text-sm">{Number(tenant.avgRating) > 0 ? tenant.avgRating : "—"}</span>
-                  </div>
-                  <p className="text-right text-xs text-white/40">
-                    {tenant.lastActivity ? format(new Date(tenant.lastActivity), "MMM d") : "—"}
-                  </p>
-                  <div className="flex justify-end">
                     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
                       <CheckCircle2 className="w-3 h-3" /> Active
                     </span>
                   </div>
+                  <div className="flex flex-wrap gap-4 mt-3 md:hidden text-sm text-white/60">
+                    <span className="flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> {formatCurrency(tenant.revenue)}</span>
+                    <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {tenant.appointments} apts</span>
+                    <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 text-yellow-400" /> {tenant.avgRating}</span>
+                    <span className="flex items-center gap-1"><CreditCard className="w-3.5 h-3.5" /> {plan}</span>
+                  </div>
+
+                  <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] gap-4 items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400 font-bold shrink-0">
+                        {tenant.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white text-sm">{tenant.name}</p>
+                        <p className="text-xs text-white/40 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" /> {tenant.city}, {tenant.state}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-right font-semibold text-emerald-400 text-sm">{formatCurrency(tenant.revenue)}</p>
+                    <div className="text-right">
+                      <p className="font-semibold text-white text-sm">{tenant.appointments}</p>
+                      <p className="text-xs text-white/30">{tenant.staff} staff</p>
+                    </div>
+                    <div className="text-right flex items-center justify-end gap-1">
+                      <Star className="w-3.5 h-3.5 text-yellow-400" />
+                      <span className="font-semibold text-white text-sm">{Number(tenant.avgRating) > 0 ? tenant.avgRating : "\u2014"}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${PLAN_COLORS[plan] ?? PLAN_COLORS.free}`}>
+                        {plan}
+                      </span>
+                    </div>
+                    <div className="flex justify-end">
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
+                        <CheckCircle2 className="w-3 h-3" /> Active
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           {!isLoading && filtered.length === 0 && (
             <div className="p-12 text-center text-white/30">No salons found</div>
           )}

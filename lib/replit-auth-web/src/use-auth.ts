@@ -34,6 +34,7 @@ interface AuthState {
   user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isImpersonating: boolean;
   login: () => void;
   logout: () => void;
 }
@@ -41,6 +42,7 @@ interface AuthState {
 export function useAuth(): AuthState {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isImpersonating, setIsImpersonating] = useState(false);
   const cancelledRef = useRef(false);
 
   useEffect(() => {
@@ -52,17 +54,19 @@ export function useAuth(): AuthState {
     })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<{ user: AuthUser | null }>;
+        return res.json() as Promise<{ user: AuthUser | null; isImpersonating?: boolean }>;
       })
       .then((data) => {
         if (!cancelledRef.current) {
           setUser(data.user ?? null);
+          setIsImpersonating(!!data.isImpersonating);
           setIsLoading(false);
         }
       })
       .catch(() => {
         if (!cancelledRef.current) {
           setUser(null);
+          setIsImpersonating(false);
           setIsLoading(false);
         }
       });
@@ -97,6 +101,7 @@ export function useAuth(): AuthState {
     user,
     isLoading,
     isAuthenticated: !!user,
+    isImpersonating,
     login,
     logout,
   };

@@ -2,7 +2,7 @@
 
 ## Overview
 
-SalonSync is a production-grade, multi-tenant SaaS platform for hair salons. Built as a pnpm monorepo with TypeScript throughout. Features multi-location support, three user roles (Admin/Staff/Client), AI-powered appointment risk scoring, sentiment analysis, an AI receptionist chatbot, analytics, Stripe-ready payments, gift cards, reviews, and notifications.
+SalonSync is a production-grade, multi-tenant SaaS platform for hair salons. Built as a pnpm monorepo with TypeScript throughout. Features multi-location support, four user roles (Super Admin/Admin/Staff/Client), AI-powered appointment risk scoring, sentiment analysis, an AI receptionist chatbot, analytics, Stripe-ready payments, gift cards, reviews, notifications, and a full platform super-admin interface.
 
 ## Design Language
 
@@ -43,9 +43,9 @@ SalonSync is a production-grade, multi-tenant SaaS platform for hair salons. Bui
 └── tsconfig.json
 ```
 
-## Database Schema (17 tables)
+## Database Schema (19 tables)
 
-- `enums` — appointmentStatus, paymentStatus, riskLevel, serviceCategory, userRole
+- `enums` — appointmentStatus, paymentStatus, riskLevel, serviceCategory, userRole (includes SUPER_ADMIN)
 - `locations` — salon locations with cancellation fee policy
 - `users` (auth.ts) + `sessions` — Replit Auth users extended with role, phone, locationId, specialties, stripeCustomerId
 - `services` — STANDARD/HIGH_VALUE services with base price, duration
@@ -62,6 +62,8 @@ SalonSync is a production-grade, multi-tenant SaaS platform for hair salons. Bui
 - `analytics` — daily aggregated metrics by location
 - `conversations` (id serial, userId, title) — AI chat sessions
 - `messages` (id serial, conversationId int FK) — AI chat messages
+- `announcements` (id serial) — platform-wide announcements (title, message, type, targetRole, createdBy)
+- `subscriptions` — tenant billing/subscription plans (locationId, plan, status, monthlyAmount)
 
 ## API Routes (all under `/api`)
 
@@ -168,6 +170,23 @@ Root `tsconfig.json` references all packages. API server depends on `@workspace/
   - **Multi-Location** — network-wide revenue/appointments/ratings comparison
 - Custom date range picker alongside preset buttons (7/30/90 days)
 - 4 new API endpoints: `GET /api/analytics/stylist-productivity`, `/revenue-per-chair`, `/retail-sales`, `/multi-location`
+
+### Platform Super Admin Interface
+- **Four roles**: SUPER_ADMIN, ADMIN, STAFF, CLIENT — `SUPER_ADMIN` has full platform access
+- **Production setup**: POST `/api/auth/make-super-admin` secured by `PLATFORM_SETUP_KEY` env var; UI at `/setup-platform`
+- **Dev login**: "Super Admin" button in DEV switcher (seed user `seed-superadmin-001`)
+- **Platform pages** (violet/indigo theme via `PlatformLayout.tsx`):
+  - `/platform/dashboard` — network-wide KPIs, revenue chart, recent activity
+  - `/platform/tenants` — salon list with metrics, "Add Salon" modal, subscription plan badges
+  - `/platform/users` — all users with role filters, "Login As" (impersonation) button per user
+  - `/platform/announcements` — create/delete platform-wide announcements (info/warning/alert/update types, targetable by role)
+  - `/platform/analytics` — aggregated charts, salon performance breakdown
+  - `/platform/support` — high-risk alerts, cancellation monitoring
+- **User impersonation**: POST `/api/platform/impersonate/:userId` creates a session as target user with `impersonatorSid` backlink; POST `/api/platform/stop-impersonation` restores original super admin session. Amber banner shows "Viewing as [Name]" with "Stop Impersonation" button. Audit logged.
+- **Announcements**: DB table with type/targetRole; endpoints GET/POST/DELETE `/api/platform/announcements`
+- **Subscriptions**: DB table linking locationId to plan (free/starter/professional/enterprise) with status and billing amount; GET/PATCH `/api/platform/subscriptions`
+- **Input validation**: All mutation endpoints validate input types, lengths, and enum values
+- **Audit logging**: Structured JSON logs for CREATE_TENANT, CREATE_ANNOUNCEMENT, IMPERSONATE_START, IMPERSONATE_STOP
 
 ## Pending / Future Work
 

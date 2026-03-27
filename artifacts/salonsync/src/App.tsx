@@ -32,11 +32,13 @@ import { PlatformDashboard } from "@/pages/platform/PlatformDashboard";
 import { PlatformTenants } from "@/pages/platform/PlatformTenants";
 import { PlatformUsers } from "@/pages/platform/PlatformUsers";
 import { PlatformAnalytics } from "@/pages/platform/PlatformAnalytics";
+import { PlatformAnnouncements } from "@/pages/platform/PlatformAnnouncements";
 import { PlatformSupport } from "@/pages/platform/PlatformSupport";
 
 import { SetupAdmin } from "@/pages/SetupAdmin";
 import { SetupPlatform } from "@/pages/SetupPlatform";
 import { DevSwitcher } from "@/components/DevSwitcher";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,6 +84,7 @@ function Router() {
       <Route path="/platform/dashboard" component={PlatformDashboard} />
       <Route path="/platform/tenants" component={PlatformTenants} />
       <Route path="/platform/users" component={PlatformUsers} />
+      <Route path="/platform/announcements" component={PlatformAnnouncements} />
       <Route path="/platform/analytics" component={PlatformAnalytics} />
       <Route path="/platform/support" component={PlatformSupport} />
 
@@ -96,6 +99,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+        <ImpersonationBanner />
         <Router />
         <DevSwitcher />
       </WouterRouter>
