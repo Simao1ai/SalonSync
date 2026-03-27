@@ -4,16 +4,36 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useListAppointments } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Calendar, CreditCard, Sparkles } from "lucide-react";
+import { Calendar, CreditCard, Sparkles, ShoppingBag, Package, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { PaymentHistory } from "@/components/payments/PaymentHistory";
 import { TipPrompt } from "@/components/tips/TipPrompt";
 import { AnnouncementsBanner } from "@/components/AnnouncementsBanner";
 
+function getHeaders() {
+  const headers: Record<string, string> = {};
+  const sid = sessionStorage.getItem("__salonsync_dev_sid__");
+  if (sid) headers["Authorization"] = `Bearer ${sid}`;
+  return headers;
+}
+
 export function ClientDashboard() {
   const { user } = useAuth();
   const { data: appointments, isLoading } = useListAppointments({ clientId: user?.id });
+
+  const { data: locations } = useQuery<any[]>({
+    queryKey: ["locations"],
+    queryFn: () => fetch("/api/locations", { headers: getHeaders() }).then(r => r.json()),
+  });
+  const locationId = locations?.[0]?.id;
+
+  const { data: featuredProducts = [] } = useQuery<any[]>({
+    queryKey: ["featured-products", locationId],
+    queryFn: () => fetch(`/api/store/products?locationId=${locationId}`, { headers: getHeaders() }).then(r => r.json()),
+    enabled: !!locationId,
+  });
 
   const upcoming = appointments?.filter(a => new Date(a.startTime) > new Date() && a.status !== 'CANCELLED') || [];
   const past = appointments?.filter(a => new Date(a.startTime) <= new Date() || a.status === 'COMPLETED') || [];
@@ -134,6 +154,46 @@ export function ClientDashboard() {
               <Button variant="outline" className="w-full">Purchase Gift Card</Button>
             </CardContent>
           </Card>
+
+          {featuredProducts.length > 0 && (
+            <Card className="bg-gradient-to-br from-[#1A1F2E] to-[#0A0F1D] border-white/10">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-full bg-primary/10">
+                      <ShoppingBag className="w-5 h-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-bold">Shop Products</h3>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {featuredProducts.slice(0, 3).map((product: any) => (
+                    <div key={product.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
+                      {product.imageUrl ? (
+                        <img src={product.imageUrl} alt={product.name} className="w-10 h-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Package className="w-4 h-4 text-primary/50" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{product.name}</p>
+                        {product.category && (
+                          <p className="text-[10px] text-white/30">{product.category}</p>
+                        )}
+                      </div>
+                      <span className="text-primary font-bold text-sm">${product.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link href="/client/store" className="block mt-4">
+                  <Button variant="outline" className="w-full gap-2">
+                    Browse All Products <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
 
           <PaymentHistory />
         </div>
