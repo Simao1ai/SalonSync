@@ -274,6 +274,36 @@ router.post("/mobile-auth/logout", async (req: Request, res: Response) => {
   res.json(LogoutMobileSessionResponse.parse({ success: true }));
 });
 
+// Promote the logged-in user to SUPER_ADMIN using a secret platform setup key.
+// Set the PLATFORM_SETUP_KEY env var to activate this. Can be used multiple times
+// (the key is the lock — anyone with the key can become a platform admin).
+router.post("/auth/make-super-admin", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated() || !req.user) {
+    res.status(401).json({ error: "You must be logged in first" });
+    return;
+  }
+
+  const platformKey = process.env.PLATFORM_SETUP_KEY;
+  if (!platformKey) {
+    res.status(503).json({ error: "Platform setup is not enabled. Set the PLATFORM_SETUP_KEY environment variable to activate it." });
+    return;
+  }
+
+  const { key } = req.body as { key?: string };
+  if (!key || key !== platformKey) {
+    res.status(403).json({ error: "Invalid platform setup key." });
+    return;
+  }
+
+  const [updated] = await db
+    .update(usersTable)
+    .set({ role: "SUPER_ADMIN", updatedAt: new Date() })
+    .where(eq(usersTable.id, req.user.id))
+    .returning();
+
+  res.json({ success: true, message: "Your account has been granted Super Admin access. Please log out and log back in.", user: updated });
+});
+
 // One-time endpoint to promote the currently logged-in user to ADMIN.
 // Works only if there are no existing admins yet, keeping it self-service but safe.
 router.post("/auth/make-admin", async (req: Request, res: Response) => {

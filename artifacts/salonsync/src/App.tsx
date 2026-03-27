@@ -35,6 +35,7 @@ import { PlatformAnalytics } from "@/pages/platform/PlatformAnalytics";
 import { PlatformSupport } from "@/pages/platform/PlatformSupport";
 
 import { SetupAdmin } from "@/pages/SetupAdmin";
+import { SetupPlatform } from "@/pages/SetupPlatform";
 import { DevSwitcher } from "@/components/DevSwitcher";
 
 const queryClient = new QueryClient({
@@ -85,6 +86,7 @@ function Router() {
       <Route path="/platform/support" component={PlatformSupport} />
 
       <Route path="/setup-admin" component={SetupAdmin} />
+      <Route path="/setup-platform" component={SetupPlatform} />
       <Route component={NotFound} />
     </Switch>
   );
