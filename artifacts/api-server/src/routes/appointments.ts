@@ -169,7 +169,7 @@ router.post("/appointments", async (req, res) => {
   getAppointmentWithDetails(appointment.id).then(details => {
     if (details) {
       sendAppointmentConfirmation(details as any).catch(() => {});
-      scheduleReminders(appointment.id, startTime).catch(() => {});
+      scheduleReminders(appointment.id, startTime, body.clientId).catch(() => {});
     }
   }).catch(() => {});
 
@@ -392,7 +392,7 @@ router.post("/appointments/:id/make-recurring", async (req, res) => {
       );
     }
 
-    await scheduleReminders(child.id, cursor).catch(() => {});
+    await scheduleReminders(child.id, cursor, parent.clientId).catch(() => {});
     created.push(child.id);
   }
 

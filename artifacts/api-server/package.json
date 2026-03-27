@@ -19,6 +19,7 @@
     "express": "^5",
     "express-session": "^1.18.2",
     "openid-client": "^6.6.0",
+    "resend": "^6.9.4",
     "stripe": "^20.4.1",
     "twilio": "^5.13.0",
     "zod": "catalog:"

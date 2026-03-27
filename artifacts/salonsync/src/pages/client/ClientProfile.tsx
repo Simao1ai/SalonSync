@@ -58,24 +58,35 @@ export function ClientProfile() {
     queryKey: ["notif-prefs"],
     queryFn: async () => {
       const r = await fetch("/api/notifications/preferences", { headers: getAuthHeaders() });
-      return r.json() as Promise<{ smsEnabled: boolean; emailEnabled: boolean; phone: string | null; email: string | null }>;
+      return r.json() as Promise<{
+        smsEnabled: boolean; emailEnabled: boolean;
+        reminderHoursBefore: number; secondReminderHours: number;
+        marketingOptIn: boolean; reviewRequestEnabled: boolean;
+        phone: string | null; email: string | null;
+      }>;
     },
     enabled: !!user,
   });
 
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [smsNotifs, setSmsNotifs] = useState(true);
+  const [reminderHours, setReminderHours] = useState(24);
+  const [reviewEnabled, setReviewEnabled] = useState(true);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
 
   useEffect(() => {
     if (prefs) {
       setEmailNotifs(prefs.emailEnabled ?? true);
       setSmsNotifs(prefs.smsEnabled ?? true);
+      setReminderHours(prefs.reminderHoursBefore ?? 24);
+      setReviewEnabled(prefs.reviewRequestEnabled ?? true);
+      setMarketingOptIn(prefs.marketingOptIn ?? false);
       if (prefs.phone) setPhone(prefs.phone);
     }
   }, [prefs]);
 
   const prefsMutation = useMutation({
-    mutationFn: async (data: { smsEnabled?: boolean; emailEnabled?: boolean }) => {
+    mutationFn: async (data: Record<string, any>) => {
       const r = await fetch("/api/notifications/preferences", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
@@ -96,6 +107,21 @@ export function ClientProfile() {
   function handleToggleSms(v: boolean) {
     setSmsNotifs(v);
     prefsMutation.mutate({ smsEnabled: v });
+  }
+
+  function handleToggleReviews(v: boolean) {
+    setReviewEnabled(v);
+    prefsMutation.mutate({ reviewRequestEnabled: v });
+  }
+
+  function handleToggleMarketing(v: boolean) {
+    setMarketingOptIn(v);
+    prefsMutation.mutate({ marketingOptIn: v });
+  }
+
+  function handleReminderChange(hours: number) {
+    setReminderHours(hours);
+    prefsMutation.mutate({ reminderHoursBefore: hours });
   }
 
   const unread = notifications?.filter(n => !n.isRead) ?? [];
@@ -211,15 +237,15 @@ export function ClientProfile() {
               </div>
               {[
                 {
-                  label: "Email reminders",
-                  description: `Booking confirmations & 24hr reminders to ${prefs?.email ?? user?.email ?? "your email"}`,
+                  label: "Email notifications",
+                  description: `Booking confirmations, reminders & review requests to ${prefs?.email ?? user?.email ?? "your email"}`,
                   icon: Mail,
                   value: emailNotifs,
                   onChange: handleToggleEmail,
                 },
                 {
-                  label: "SMS reminders",
-                  description: phone ? `Text reminders to ${phone}` : "Add a phone number above to receive SMS reminders",
+                  label: "SMS notifications",
+                  description: phone ? `Text reminders to ${phone}` : "Add a phone number above to receive SMS",
                   icon: Phone,
                   value: smsNotifs,
                   onChange: handleToggleSms,
@@ -237,6 +263,60 @@ export function ClientProfile() {
                     </div>
                   </div>
                   <Toggle value={value && !disabled} onChange={onChange} disabled={!!disabled || prefsLoading} />
+                </div>
+              ))}
+            </div>
+
+            {/* Reminder timing */}
+            <div className="mt-4 rounded-xl border border-white/[0.06] overflow-hidden">
+              <div className="px-4 py-2.5 bg-white/[0.02] border-b border-white/[0.06]">
+                <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Reminder timing</p>
+              </div>
+              <div className="px-4 py-3.5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white/80">Remind me before appointments</p>
+                    <p className="text-xs text-white/30">How far in advance you'd like to be reminded</p>
+                  </div>
+                  <select
+                    value={reminderHours}
+                    onChange={e => handleReminderChange(parseInt(e.target.value, 10))}
+                    disabled={prefsLoading}
+                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 min-w-[130px]"
+                  >
+                    {[2, 4, 6, 12, 24, 48, 72].map(h => (
+                      <option key={h} value={h}>{h} hours</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional preferences */}
+            <div className="mt-4 rounded-xl border border-white/[0.06] overflow-hidden">
+              <div className="px-4 py-2.5 bg-white/[0.02] border-b border-white/[0.06]">
+                <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Preferences</p>
+              </div>
+              {[
+                {
+                  label: "Review requests",
+                  description: "Receive review requests after completed appointments",
+                  value: reviewEnabled,
+                  onChange: handleToggleReviews,
+                },
+                {
+                  label: "Promotions & offers",
+                  description: "Special deals and marketing communications",
+                  value: marketingOptIn,
+                  onChange: handleToggleMarketing,
+                },
+              ].map(({ label, description, value, onChange }) => (
+                <div key={label} className="flex items-center justify-between gap-4 px-4 py-3.5 border-b border-white/[0.04] last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white/80">{label}</p>
+                    <p className="text-xs text-white/30">{description}</p>
+                  </div>
+                  <Toggle value={value} onChange={onChange} disabled={prefsLoading} />
                 </div>
               ))}
             </div>

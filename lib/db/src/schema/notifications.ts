@@ -18,6 +18,8 @@ export const notificationsTable = pgTable("notifications", {
   message: text("message").notNull(),
   isRead: boolean("is_read").default(false),
   sentAt: timestamp("sent_at", { withTimezone: true }),
+  channel: varchar("channel", { length: 20 }).default("in_app"),
+  deliveryStatus: varchar("delivery_status", { length: 20 }).default("sent"),
   userId: varchar("user_id", { length: 128 })
     .notNull()
     .references(() => usersTable.id),

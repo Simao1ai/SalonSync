@@ -3,11 +3,217 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useListLocations } from "@workspace/api-client-react";
-import { Settings, MapPin, Clock, CreditCard, Bell, Shield, Save, Palette } from "lucide-react";
+import { Settings, MapPin, Clock, CreditCard, Bell, Shield, Save, Palette, Mail, Phone, MessageSquare, Star, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBranding } from "@/contexts/BrandingContext";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/replit-auth-web";
+
+function getAuthHeaders(): Record<string, string> {
+  const sid = sessionStorage.getItem("__salonsync_dev_sid__");
+  return sid ? { Authorization: `Bearer ${sid}` } : {};
+}
+
+function NotifToggle({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={() => !disabled && onChange(!value)}
+      disabled={disabled}
+      className={`relative w-10 h-5 rounded-full transition-colors ${value ? "bg-primary" : "bg-white/10"} ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+    >
+      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${value ? "left-5" : "left-0.5"}`} />
+    </button>
+  );
+}
+
+function AdminNotificationSettings() {
+  const { data: prefs, isLoading } = useQuery({
+    queryKey: ["admin-notif-prefs"],
+    queryFn: async () => {
+      const r = await fetch("/api/notifications/preferences", { headers: getAuthHeaders() });
+      return r.json();
+    },
+  });
+
+  const qc = useQueryClient();
+
+  const [emailEnabled, setEmailEnabled] = useState(true);
+  const [smsEnabled, setSmsEnabled] = useState(true);
+  const [reminderHours, setReminderHours] = useState(24);
+  const [secondReminderHours, setSecondReminderHours] = useState(2);
+  const [reviewEnabled, setReviewEnabled] = useState(true);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
+
+  useEffect(() => {
+    if (prefs) {
+      setEmailEnabled(prefs.emailEnabled ?? true);
+      setSmsEnabled(prefs.smsEnabled ?? true);
+      setReminderHours(prefs.reminderHoursBefore ?? 24);
+      setSecondReminderHours(prefs.secondReminderHours ?? 2);
+      setReviewEnabled(prefs.reviewRequestEnabled ?? true);
+      setMarketingOptIn(prefs.marketingOptIn ?? false);
+    }
+  }, [prefs]);
+
+  const mutation = useMutation({
+    mutationFn: async (data: Record<string, any>) => {
+      const r = await fetch("/api/notifications/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify(data),
+      });
+      return r.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-notif-prefs"] });
+      toast.success("Notification preferences saved");
+    },
+  });
+
+  function handleSaveAll() {
+    mutation.mutate({
+      emailEnabled,
+      smsEnabled,
+      reminderHoursBefore: reminderHours,
+      secondReminderHours,
+      reviewRequestEnabled: reviewEnabled,
+      marketingOptIn,
+    });
+  }
+
+  if (isLoading) return <Card><CardContent className="py-8 text-center text-muted-foreground">Loading...</CardContent></Card>;
+
+  const channels = [
+    {
+      label: "Email Notifications",
+      description: "Appointment confirmations, reminders, and review requests via email",
+      icon: Mail,
+      value: emailEnabled,
+      onChange: setEmailEnabled,
+    },
+    {
+      label: "SMS Notifications",
+      description: "Text message reminders and alerts",
+      icon: Phone,
+      value: smsEnabled,
+      onChange: setSmsEnabled,
+    },
+  ];
+
+  const features = [
+    {
+      label: "Post-Visit Review Requests",
+      description: "Automatically request client reviews 24 hours after completed appointments",
+      icon: Star,
+      value: reviewEnabled,
+      onChange: setReviewEnabled,
+    },
+    {
+      label: "Marketing Communications",
+      description: "Promotional emails and special offers",
+      icon: MessageSquare,
+      value: marketingOptIn,
+      onChange: setMarketingOptIn,
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Bell className="w-5 h-5 text-primary" />Delivery Channels</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="divide-y divide-white/5">
+            {channels.map(({ label, description, icon: Icon, value, onChange }) => (
+              <div key={label} className="flex items-center justify-between py-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${value ? "bg-primary/15" : "bg-white/[0.04]"}`}>
+                    <Icon className={`w-4 h-4 ${value ? "text-primary" : "text-white/30"}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{label}</p>
+                    <p className="text-xs text-muted-foreground">{description}</p>
+                  </div>
+                </div>
+                <NotifToggle value={value} onChange={onChange} />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-primary" />Reminder Timing</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white/70">Primary Reminder</label>
+            <p className="text-xs text-muted-foreground">How many hours before the appointment to send the first reminder</p>
+            <select
+              value={reminderHours}
+              onChange={e => setReminderHours(parseInt(e.target.value, 10))}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
+            >
+              {[2, 4, 6, 12, 24, 48, 72].map(h => (
+                <option key={h} value={h}>{h} hours before</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white/70">Secondary Reminder</label>
+            <p className="text-xs text-muted-foreground">A shorter heads-up closer to the appointment time</p>
+            <select
+              value={secondReminderHours}
+              onChange={e => setSecondReminderHours(parseInt(e.target.value, 10))}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
+            >
+              {[1, 2, 3, 4, 6].map(h => (
+                <option key={h} value={h}>{h} hour{h > 1 ? "s" : ""} before</option>
+              ))}
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Star className="w-5 h-5 text-primary" />Automated Features</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="divide-y divide-white/5">
+            {features.map(({ label, description, icon: Icon, value, onChange }) => (
+              <div key={label} className="flex items-center justify-between py-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${value ? "bg-primary/15" : "bg-white/[0.04]"}`}>
+                    <Icon className={`w-4 h-4 ${value ? "text-primary" : "text-white/30"}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{label}</p>
+                    <p className="text-xs text-muted-foreground">{description}</p>
+                  </div>
+                </div>
+                <NotifToggle value={value} onChange={onChange} />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex items-center gap-3">
+        <Button onClick={handleSaveAll} disabled={mutation.isPending} className="gap-2">
+          <Save className="w-4 h-4" /> Save All Notification Settings
+        </Button>
+        {mutation.isSuccess && (
+          <span className="flex items-center gap-1.5 text-xs text-green-400">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Saved
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const TABS = [
   { id: "general", label: "General", icon: Settings },
@@ -282,33 +488,7 @@ export function AdminSettings() {
             </Card>
           )}
 
-          {tab === "notifications" && (
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><Bell className="w-5 h-5 text-primary" />Notification Settings</CardTitle></CardHeader>
-              <CardContent>
-                <div className="divide-y divide-white/5">
-                  {[
-                    { label: "New Appointment Booked", desc: "Get notified when a new appointment is created" },
-                    { label: "Appointment Cancelled", desc: "Get notified on cancellations" },
-                    { label: "High-Risk Client Alert", desc: "Alert when an AI risk score is HIGH" },
-                    { label: "Daily Summary", desc: "Receive a daily digest of salon activity" },
-                    { label: "Staff No-Show Alert", desc: "Alert when staff hasn't checked in" },
-                  ].map(n => (
-                    <div key={n.label} className="flex items-center justify-between py-4">
-                      <div>
-                        <p className="text-sm font-medium">{n.label}</p>
-                        <p className="text-xs text-muted-foreground">{n.desc}</p>
-                      </div>
-                      <input type="checkbox" defaultChecked className="w-5 h-5 rounded accent-primary cursor-pointer" />
-                    </div>
-                  ))}
-                </div>
-                <div className="pt-4">
-                  <Button onClick={handleSave} className="gap-2"><Save className="w-4 h-4" /> Save Notifications</Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {tab === "notifications" && <AdminNotificationSettings />}
 
           {tab === "security" && (
             <Card>

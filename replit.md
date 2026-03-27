@@ -43,7 +43,7 @@ SalonSync is a production-grade, multi-tenant SaaS platform for hair salons. Bui
 └── tsconfig.json
 ```
 
-## Database Schema (19 tables)
+## Database Schema (20 tables)
 
 - `enums` — appointmentStatus, paymentStatus, riskLevel, serviceCategory, userRole (includes SUPER_ADMIN)
 - `locations` — salon locations with cancellation fee policy
@@ -56,8 +56,9 @@ SalonSync is a production-grade, multi-tenant SaaS platform for hair salons. Bui
 - `availability` — staff weekly schedules + block dates
 - `gift_cards` — purchasable gift cards with balance
 - `service_packages` — bundled service packages
-- `notifications` — in-app notification feed
-- `reminders` — scheduled appointment reminders
+- `notifications` — in-app notification feed with channel (in_app/sms/email) and deliveryStatus tracking
+- `notification_preferences` — per-user notification prefs (emailEnabled, smsEnabled, reminderHoursBefore, secondReminderHours, marketingOptIn, reviewRequestEnabled)
+- `reminders` — scheduled appointment reminders (dynamic timing from user prefs)
 - `products` — retail products sold at salon
 - `analytics` — daily aggregated metrics by location
 - `conversations` (id serial, userId, title) — AI chat sessions
