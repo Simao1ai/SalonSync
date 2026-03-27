@@ -14,6 +14,7 @@ import { Analytics } from "@/pages/admin/Analytics";
 import { AdminWaitlist } from "@/pages/admin/AdminWaitlist";
 import { AdminSchedule } from "@/pages/admin/AdminSchedule";
 import { IntakeFormBuilder } from "@/pages/admin/IntakeFormBuilder";
+import { Marketing } from "@/pages/admin/Marketing";
 
 import { Explore } from "@/pages/Explore";
 
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/admin/waitlist" component={AdminWaitlist} />
       <Route path="/admin/schedule" component={AdminSchedule} />
       <Route path="/admin/intake-forms" component={IntakeFormBuilder} />
+      <Route path="/admin/marketing" component={Marketing} />
 
       {/* Staff */}
       <Route path="/staff/dashboard" component={StaffDashboard} />

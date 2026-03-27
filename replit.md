@@ -2,225 +2,40 @@
 
 ## Overview
 
-SalonSync is a production-grade, multi-tenant SaaS platform for hair salons. Built as a pnpm monorepo with TypeScript throughout. Features multi-location support, four user roles (Super Admin/Admin/Staff/Client), AI-powered appointment risk scoring, sentiment analysis, an AI receptionist chatbot, analytics, Stripe-ready payments, gift cards, reviews, notifications, and a full platform super-admin interface.
+SalonSync is a multi-tenant SaaS platform for hair salons, designed as a pnpm monorepo using TypeScript. It provides multi-location support, four distinct user roles, and a suite of AI-powered features including appointment risk scoring, sentiment analysis, and an AI receptionist chatbot. The platform also includes analytics, Stripe-ready payment functionality, gift cards, reviews, notifications, and a comprehensive super-admin interface. The vision is to offer a production-grade solution that streamlines salon operations and enhances client engagement through advanced technology.
 
-## Design Language
+## User Preferences
 
-- **Background**: `#0F172A` (deep slate)
-- **Accent**: `#C9956A` (rose-gold)
-- **Headings**: Playfair Display
-- **Body**: DM Sans
-- **Tailwind CSS** with custom CSS variables in `index.css`
+No specific user preferences were provided in the original document.
 
-## Tech Stack
+## System Architecture
 
-- **Monorepo**: pnpm workspaces
-- **Node.js**: 24, **TypeScript**: 5.9
-- **Frontend**: React + Vite (artifacts/salonsync)
-- **Backend**: Express 5 (artifacts/api-server)
-- **Database**: PostgreSQL + Drizzle ORM (`@workspace/db`)
-- **Auth**: Replit Auth (OpenID Connect) via `@workspace/replit-auth-web`
-- **AI**: Anthropic Claude via `@workspace/integrations-anthropic-ai` (Replit-proxied, no API key needed)
-- **API contract**: OpenAPI spec → Orval codegen → React Query hooks + Zod schemas
-- **Payments**: Stripe UI built, connect account pending
+SalonSync is built as a pnpm monorepo, utilizing Node.js 24 and TypeScript 5.9. The frontend is developed with React and Vite, while the backend uses Express 5. PostgreSQL is the chosen database, managed with Drizzle ORM. Authentication is handled via Replit Auth (OpenID Connect). AI capabilities are integrated using Anthropic Claude. The API contract is defined with OpenAPI and generated using Orval, producing React Query hooks and Zod schemas for validation. Stripe is integrated for payment processing.
 
-## Monorepo Structure
+The monorepo is structured into `artifacts` for frontend and backend applications, and `lib` for shared packages such as API specifications, database schema, authentication hooks, and AI integrations. The application features a comprehensive database schema with 25 tables covering various aspects like user roles, locations, services, appointments (including risk scores), payments, reviews (with AI sentiment), staff availability, gift cards, notifications, and platform-wide announcements.
 
-```text
-├── artifacts/
-│   ├── api-server/          # Express 5 API server (port 8080)
-│   └── salonsync/           # React + Vite frontend (port from $PORT)
-├── lib/
-│   ├── api-spec/            # OpenAPI spec + Orval codegen
-│   ├── api-client-react/    # Generated React Query hooks
-│   ├── api-zod/             # Generated Zod validation schemas
-│   ├── db/                  # Drizzle ORM schema + PostgreSQL client
-│   ├── replit-auth-web/     # Replit Auth hooks for browser (useAuth)
-│   └── integrations-anthropic-ai/  # Anthropic Claude client
-├── scripts/                 # Utility scripts
-├── pnpm-workspace.yaml
-├── tsconfig.base.json
-└── tsconfig.json
-```
+Key architectural decisions include:
+- **UI/UX:** A consistent design language with a deep slate background, rose-gold accent, Playfair Display for headings, and DM Sans for body text, implemented with Tailwind CSS.
+- **AI Integration:** AI features like appointment risk scoring and review sentiment analysis leverage Anthropic Claude, processing data asynchronously to provide insights. The AI chatbot uses Server-Sent Events (SSE) for real-time interaction.
+- **Cancellation Fee Enforcement:** A rule-based system charges cancellation fees based on service type and cancellation window.
+- **Role-Based Access Control:** Four distinct roles (Super Admin, Admin, Staff, Client) dictate access and functionalities across the platform.
+- **Scalability:** The multi-tenant architecture supports multiple salon locations, each with its branding and specific configurations.
+- **Extensibility:** The platform allows for white-label branding, customizable intake forms, and integrations with external services like Google Calendar.
+- **Advanced Reporting:** Analytics are provided through a dedicated dashboard with various metrics, including stylist productivity, revenue per chair, retail sales, and multi-location comparisons, with export capabilities (CSV/PDF).
+- **Platform Super Admin:** A dedicated interface for super administrators to manage tenants, users, announcements, and subscriptions across the entire platform, including user impersonation for support.
+- **AI Superpowers (Phase 2):** Planned features include AI Schedule Optimizer, AI Marketing Campaign Generator, AI Business Insights (Natural Language to SQL), AI Churn Prediction, and AI Smart Pricing, all with robust security measures.
 
-## Database Schema (22 tables)
+## External Dependencies
 
-- `enums` — appointmentStatus, paymentStatus, riskLevel, serviceCategory, userRole (includes SUPER_ADMIN)
-- `locations` — salon locations with cancellation fee policy
-- `users` (auth.ts) + `sessions` — Replit Auth users extended with role, phone, locationId, specialties, stripeCustomerId
-- `services` — STANDARD/HIGH_VALUE services with base price, duration
-- `appointments` — with risk score, cancellation tracking, fee charging
-- `appointment_services` — M2M: appointment → services
-- `payments` — Stripe payment records
-- `reviews` — with AI sentiment score + tags
-- `availability` — staff weekly schedules + block dates
-- `gift_cards` — purchasable gift cards with balance
-- `service_packages` — bundled service packages
-- `notifications` — in-app notification feed with channel (in_app/sms/email) and deliveryStatus tracking
-- `notification_preferences` — per-user notification prefs (emailEnabled, smsEnabled, reminderHoursBefore, secondReminderHours, marketingOptIn, reviewRequestEnabled)
-- `reminders` — scheduled appointment reminders (dynamic timing from user prefs)
-- `products` — retail products sold at salon
-- `analytics` — daily aggregated metrics by location
-- `conversations` (id serial, userId, title) — AI chat sessions
-- `messages` (id serial, conversationId int FK) — AI chat messages
-- `announcements` (id serial) — platform-wide announcements (title, message, type, targetRole, createdBy)
-- `subscriptions` — tenant billing/subscription plans (locationId, plan, status, monthlyAmount)
-- `intake_forms` — customizable intake forms per location (fields JSONB, HIPAA flag)
-- `intake_form_responses` — client form responses with signature data
-
-## API Routes (all under `/api`)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/healthz` | Health check |
-| GET/POST | `/auth/user`, `/auth/login`, `/auth/callback`, `/auth/logout` | Replit Auth |
-| GET/POST | `/locations` | List/create locations |
-| GET/PUT/DELETE | `/locations/:id` | Get/update/deactivate location |
-| GET/PUT | `/users`, `/users/:id` | List/update users |
-| GET/POST | `/services` | List/create services |
-| GET/PUT/DELETE | `/services/:id` | Get/update/deactivate service |
-| GET/POST | `/appointments` | List/create appointments |
-| GET/PUT | `/appointments/:id` | Get/update appointment |
-| POST | `/appointments/:id/cancel` | Cancel with fee enforcement |
-| GET/POST/DELETE | `/availability` | Staff availability |
-| GET/POST | `/reviews` | List/create reviews |
-| GET | `/analytics` | Analytics summary for location |
-| GET/POST | `/gift-cards` | Gift card management |
-| GET/POST | `/notifications` | Notifications + mark read |
-| POST | `/ai/risk-score` | AI appointment risk scoring (Claude) |
-| POST | `/ai/sentiment` | AI review sentiment analysis (Claude) |
-| POST | `/ai/chat` | AI receptionist one-shot chat (Claude) |
-| GET/POST/DELETE | `/anthropic/conversations` | Conversation management |
-| GET/POST | `/anthropic/conversations/:id/messages` | SSE streaming chat |
-
-## Frontend Pages
-
-- `/` — Landing page (login redirect if not authenticated)
-- `/admin/dashboard` — Admin: stats, recent appointments, risk badges
-- `/admin/analytics` — Charts: revenue, appointments, cancellations (Recharts)
-- `/staff/dashboard` — Staff: today's schedule, personal stats
-- `/client/dashboard` — Client: upcoming appointments, book CTA, gift card balance
-- `/client/book` — 4-step booking wizard: service → stylist → time → confirm
-- `/admin/:page` — Stub fallback for admin sub-pages
-
-## Key Behaviors
-
-### Cancellation Fee Enforcement
-When cancelling within `location.cancellationWindowHours` (default 48h):
-- Standard services: 50% of total price charged
-- HIGH_VALUE services: 100% of total price charged
-- Fee logged to `appointments.cancelFeeCharged`
-
-### AI Risk Scoring
-On appointment creation, async POST to `/api/ai/risk-score`:
-- Claude analyzes client history + day/time → returns LOW/MEDIUM/HIGH
-- Score stored on the appointment, shown as colored badges in admin view
-
-### AI Chatbot (SSE)
-POST `/api/anthropic/conversations/:id/messages` streams `text/event-stream`:
-- Events: `{"type":"text","text":"..."}` chunks, then `{"type":"done"}`
-- Frontend uses `use-chat-stream.ts` hook (EventSource/fetch reader)
-
-## Seeded Demo Data
-
-A single location "SalonSync Downtown" (Beverly Hills, CA) with 6 services has been seeded:
-- Classic Cut & Style ($85, STANDARD)
-- Color Treatment ($225, HIGH_VALUE)
-- Balayage ($350, HIGH_VALUE)
-- Deep Conditioning ($65, STANDARD)
-- Blowout ($55, STANDARD)
-- Keratin Smoothing ($400, HIGH_VALUE)
-
-## Codegen
-
-After editing `lib/api-spec/openapi.yaml`:
-```
-pnpm --filter @workspace/api-spec run codegen
-```
-This regenerates both `lib/api-client-react` and `lib/api-zod`.
-
-## DB Schema Push
-
-```
-pnpm --filter @workspace/db run push
-```
-
-## TypeScript Project References
-
-Root `tsconfig.json` references all packages. API server depends on `@workspace/db`, `@workspace/api-zod`, `@workspace/integrations-anthropic-ai`, `@workspace/replit-auth-web`. Frontend depends on `@workspace/api-client-react`, `@workspace/replit-auth-web`.
-
-## Recently Added Features
-
-### Public Salon Marketplace (`/explore`)
-- `GET /api/explore/locations` — public, no auth, aggregates avg rating + top 3 services per location
-- `Explore.tsx` — card grid with search, sort (Top Rated / Lowest Price), price range filter
-- "Find a Salon" button on Landing hero links to `/explore`
-
-### Staff Schedule Calendar (`/admin/schedule`)
-- `GET /api/schedule?locationId=&weekOf=` — returns appointments + staff + availability for the week
-- `PATCH /api/appointments/:id/reschedule` — changes staffId/startTime, recalculates endTime
-- `AdminSchedule.tsx` — staff-as-columns weekly grid with @dnd-kit drag-and-drop
-- Drag appointment blocks to reassign staff or move to a different day
-- AI risk score badges (LOW/MED/HIGH), block-time overlays, appointment detail modal
-- Added "Schedule" link to Admin sidebar
-
-### Deep Financial Reporting (`/admin/analytics`)
-- Analytics page refactored into tabbed layout:
-  - **Overview** — all existing KPI cards, charts, staff table (unchanged)
-  - **Stylist Productivity** — per-stylist revenue, avg ticket, cancellation/no-show rates
-  - **Revenue Per Chair** — utilization % (booked vs available minutes), dual-axis chart
-  - **Retail Sales** — top services by revenue, products catalog, performance table
-  - **Multi-Location** — network-wide revenue/appointments/ratings comparison
-- Custom date range picker alongside preset buttons (7/30/90 days)
-- 4 new API endpoints: `GET /api/analytics/stylist-productivity`, `/revenue-per-chair`, `/retail-sales`, `/multi-location`
-
-### Platform Super Admin Interface
-- **Four roles**: SUPER_ADMIN, ADMIN, STAFF, CLIENT — `SUPER_ADMIN` has full platform access
-- **Production setup**: POST `/api/auth/make-super-admin` secured by `PLATFORM_SETUP_KEY` env var; UI at `/setup-platform`
-- **Dev login**: "Super Admin" button in DEV switcher (seed user `seed-superadmin-001`)
-- **Platform pages** (violet/indigo theme via `PlatformLayout.tsx`):
-  - `/platform/dashboard` — network-wide KPIs, revenue chart, recent activity
-  - `/platform/tenants` — salon list with metrics, "Add Salon" modal, subscription plan badges
-  - `/platform/users` — all users with role filters, "Login As" (impersonation) button per user
-  - `/platform/announcements` — create/delete platform-wide announcements (info/warning/alert/update types, targetable by role)
-  - `/platform/analytics` — aggregated charts, salon performance breakdown
-  - `/platform/support` — high-risk alerts, cancellation monitoring
-- **User impersonation**: POST `/api/platform/impersonate/:userId` creates a session as target user with `impersonatorSid` backlink; POST `/api/platform/stop-impersonation` restores original super admin session. Amber banner shows "Viewing as [Name]" with "Stop Impersonation" button. Audit logged.
-- **Announcements**: DB table with type/targetRole; endpoints GET/POST/DELETE `/api/platform/announcements`; tenant-facing GET `/api/announcements` (filters by user role, shows global + role-targeted). AnnouncementsBanner component on admin/staff/client dashboards shows up to 3 latest announcements with dismiss-per-session.
-- **Subscriptions**: DB table linking locationId to plan (free/starter/professional/enterprise) with status and billing amount; GET/PATCH `/api/platform/subscriptions`
-- **Input validation**: All mutation endpoints validate input types, lengths, and enum values
-- **Audit logging**: Structured JSON logs for CREATE_TENANT, CREATE_ANNOUNCEMENT, IMPERSONATE_START, IMPERSONATE_STOP
-
-### White-Label Branding
-- **Location fields**: `brandName`, `logoUrl`, `primaryColor`, `tagline` on `locations` table
-- **PATCH `/api/locations/:id/branding`**: Admin-only (tenant-scoped — admins can only edit their own location), Super Admin can edit any
-- **BrandingContext** (`contexts/BrandingContext.tsx`): Provides `useBranding()` hook returning `{ name, logoUrl, primaryColor, tagline, locationId }`
-- **Sidebar**: Shows tenant's `brandName` (or `location.name` fallback) instead of "SalonSync"; logo rendered if `logoUrl` is set
-- **Admin Dashboard**: Heading shows tenant brand name
-- **Settings > Branding tab**: Admin can configure brand name, logo URL, tagline, and accent color with live preview
-
-### Google Calendar Integration
-- **OAuth flow**: `/api/google-calendar/connect`, `/callback`, `/disconnect`
-- **Sync**: `/api/google-calendar/sync` — pulls Google Calendar blocks into SalonSync availability
-- **Service**: `google-calendar.ts` — create/update/delete calendar events on appointment changes
-- **Staff Settings** (`/staff/settings`): Connect/Disconnect/Sync UI for Google Calendar
-- **Env vars needed**: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (graceful no-op when absent)
-
-### Intake Forms Builder (`/admin/intake-forms`)
-- **CRUD routes**: `/api/intake-forms` (admin only)
-- **Response routes**: `/api/intake-forms/responses` (submit), `/api/intake-forms/:formId/responses` (admin-only view), `/api/clients/:clientId/intake-responses` (role-gated), `/api/appointments/:appointmentId/intake-responses`
-- **Form builder UI**: Drag-and-drop with @dnd-kit, field types (text/textarea/select/checkbox/date/signature/file), HIPAA flag, live preview
-- **Access control**: Response viewing restricted to ADMIN/SUPER_ADMIN; client responses accessible to staff/admin or the client themselves
-
-### Report Export (CSV + PDF)
-- **Export dropdown** on Analytics page with CSV and PDF options per active tab
-- **CSV exports**: Per-tab functions in `report-export.ts` (overview, stylist, chair, retail, multi-location)
-- **PDF generation**: `@react-pdf/renderer` branded reports with KPI cards, tables, accent bar, footer (`pdf-report.tsx`)
-- **Error handling**: `response.ok` validation + toast feedback on export success/failure
-
-## Pending / Future Work
-
-- Stripe payment integration (UI built, connect Stripe account to activate)
-- Email notifications via Resend (templates built, needs RESEND_API_KEY)
-- Role-based route guards (currently uses `useAuth()` redirect on Landing)
-- White-label: apply `primaryColor` to CSS custom properties for full theme customization
+- **PostgreSQL:** Primary database for all application data.
+- **Drizzle ORM:** Used for database schema definition and interaction.
+- **Replit Auth (OpenID Connect):** For user authentication and authorization.
+- **Anthropic Claude:** Powers AI features like appointment risk scoring, sentiment analysis, and the AI receptionist chatbot.
+- **Stripe:** Integrated for payment processing and gift card management.
+- **Orval:** Codegen tool for generating API client hooks and Zod schemas from OpenAPI specifications.
+- **React Query:** Used for data fetching and state management in the frontend.
+- **Zod:** For runtime schema validation.
+- **Recharts:** For rendering charts and analytics in the frontend.
+- **@dnd-kit:** Used for drag-and-drop functionalities in the Staff Schedule Calendar and Intake Forms Builder.
+- **Google Calendar API:** For integrating staff schedules and availability.
+- **@react-pdf/renderer:** For generating PDF reports.

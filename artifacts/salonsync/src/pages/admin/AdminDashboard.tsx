@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,11 +11,14 @@ import { TrendingUp, Users, CalendarX, CalendarClock, DollarSign, AlertTriangle 
 import { motion } from "framer-motion";
 import { useBranding } from "@/contexts/BrandingContext";
 import { AnnouncementsBanner } from "@/components/AnnouncementsBanner";
+import { ChurnRiskSection } from "@/components/ai/ChurnRiskSection";
+import { AiInsightsPanel, AiInsightsButton } from "@/components/ai/AiInsightsPanel";
 
 export function AdminDashboard() {
   const { user } = useAuth();
   const locationId = user?.locationId ?? "da62c8fa-580b-44c9-bed8-e19938402d39";
   const branding = useBranding();
+  const [insightsOpen, setInsightsOpen] = useState(false);
   
   const { data: analytics, isLoading: analyticsLoading } = useGetAnalytics({ locationId });
   const { data: appointments, isLoading: appointmentsLoading } = useListAppointments({ locationId });
@@ -149,6 +153,13 @@ export function AdminDashboard() {
           </table>
         </div>
       </Card>
+
+      <div className="mt-8">
+        <ChurnRiskSection />
+      </div>
+
+      <AiInsightsButton onClick={() => setInsightsOpen(true)} />
+      <AiInsightsPanel open={insightsOpen} onClose={() => setInsightsOpen(false)} />
     </DashboardLayout>
   );
 }

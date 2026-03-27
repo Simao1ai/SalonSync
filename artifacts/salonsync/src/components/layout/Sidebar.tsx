@@ -21,6 +21,7 @@ import {
   LayoutGrid,
   X,
   FileText,
+  Megaphone,
 } from "lucide-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useListNotifications } from "@workspace/api-client-react";
@@ -66,6 +67,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
     { href: "/admin/waitlist",     label: "Waitlist",        icon: ClipboardList },
     { href: "/admin/analytics",    label: "Analytics",       icon: BarChart3 },
     { href: "/admin/intake-forms", label: "Intake Forms",    icon: FileText },
+    { href: "/admin/marketing",    label: "Marketing",       icon: Megaphone },
     { href: "/admin/settings",     label: "Settings",        icon: Settings },
   ];
 

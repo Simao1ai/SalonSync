@@ -22,3 +22,5 @@ export * from "./announcements";
 export * from "./subscriptions";
 export * from "./notification-preferences";
 export * from "./intake-forms";
+export * from "./campaigns";
+export * from "./ai-insights";

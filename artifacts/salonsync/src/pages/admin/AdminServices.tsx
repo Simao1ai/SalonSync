@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useListServices } from "@workspace/api-client-react";
 import { formatCurrency } from "@/lib/utils";
 import { Scissors, Plus, Clock, DollarSign, Search, Zap } from "lucide-react";
+import { SmartPricingPanel } from "@/components/ai/SmartPricingPanel";
 
 const LOCATION_ID = "da62c8fa-580b-44c9-bed8-e19938402d39";
 
@@ -128,6 +129,10 @@ export function AdminServices() {
           ))}
         </div>
       </Card>
+
+      <div className="mt-6">
+        <SmartPricingPanel />
+      </div>
     </DashboardLayout>
   );
 }

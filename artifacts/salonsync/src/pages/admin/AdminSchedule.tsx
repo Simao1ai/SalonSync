@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ScheduleOptimizer } from "@/components/ai/ScheduleOptimizer";
 import { useAuth } from "@workspace/replit-auth-web";
 import { getAuthHeaders } from "@/lib/auth-headers";
 import {
@@ -465,7 +466,10 @@ export function AdminSchedule() {
         </DndContext>
       )}
 
-      {/* Detail modal */}
+      <div className="mt-6">
+        <ScheduleOptimizer weekOf={format(weekStart, "yyyy-MM-dd")} />
+      </div>
+
       {selectedAppt && (
         <ApptModal appt={selectedAppt} onClose={() => setSelectedAppt(null)} />
       )}

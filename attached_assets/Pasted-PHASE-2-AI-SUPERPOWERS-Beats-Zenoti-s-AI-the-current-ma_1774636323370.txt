@@ -1,0 +1,52 @@
+PHASE 2: AI SUPERPOWERS (Beats Zenoti's AI — the current market leader)
+
+2.1 — AI Scheduling Optimizer (Beats: Boulevard's "Precision Scheduling", Zenoti's AI scheduling)
+
+Build an AI endpoint POST /api/ai/optimize-schedule that uses Claude to:
+Analyze the week's appointments and identify gaps in the schedule
+Suggest optimal slot placements for waitlisted clients to maximize chair utilization
+Recommend schedule adjustments to minimize dead time between appointments
+Factor in service duration, staff specialties, and travel time between services
+Show optimization suggestions in the admin schedule view with "Apply" buttons
+Display a "Schedule Efficiency Score" (% of available time booked) on the admin dashboard
+2.2 — AI Marketing Campaign Generator (Beats: Fresha, Vagaro, Zenoti's AI marketing)
+
+Build POST /api/ai/generate-campaign that uses Claude to create:
+Email subject lines and body copy personalized to client segments
+SMS marketing messages (under 160 chars)
+Social media post captions
+Seasonal promotion ideas based on the salon's services and pricing
+Add a Marketing page (/admin/marketing) with:
+Campaign builder: select audience segment, campaign type (email/SMS/social), and goal
+AI generates the content, admin reviews and edits
+Send campaigns via Resend (email) and Twilio (SMS)
+Campaign performance tracking (sent, opened, clicked, booked)
+Add campaigns and campaign_analytics tables
+2.3 — AI Business Insights / Natural Language Analytics (Beats: GlossGenius "AI Growth Analyst", Zenoti "Zeenie")
+
+Build POST /api/ai/insights that accepts natural language queries about the business
+Examples: "What was my revenue last month?", "Who are my top 5 clients by spend?", "Which stylist has the most cancellations?", "What's my busiest day of the week?"
+Claude generates SQL queries against the SalonSync database, executes them safely (read-only), and returns human-readable answers with data
+Add an "AI Insights" chat panel accessible from the admin dashboard (floating button, slides out from right)
+Include suggested questions to get started
+Store query history per admin for quick re-runs
+2.4 — AI Client Churn Prediction (Beats: Mindbody's "Clients At Risk", Zenoti's churn prediction)
+
+Build POST /api/ai/churn-prediction that analyzes client behavior:
+Days since last visit vs. their average visit frequency
+Declining visit frequency trend
+Recent negative review or low rating
+Cancelled appointments without rebooking
+Decreased spending per visit
+Returns a churn risk score (LOW/MEDIUM/HIGH) with recommended re-engagement actions
+Add a "Clients at Risk" section to the admin dashboard showing HIGH risk clients
+Auto-trigger re-engagement campaigns (email/SMS) for at-risk clients with admin approval
+2.5 — AI Smart Pricing Suggestions (Beats: Boulevard, Zenoti's dynamic pricing)
+
+Build POST /api/ai/pricing-suggestions that analyzes:
+Current service prices vs. local market rates
+Demand patterns (which services are always booked vs. underbooked)
+Peak vs. off-peak utilization
+Client price sensitivity (booking patterns after price changes)
+Suggest price adjustments, happy-hour discounts for slow periods, and premium pricing for peak demand
+Show suggestions in admin settings with "Apply" buttons

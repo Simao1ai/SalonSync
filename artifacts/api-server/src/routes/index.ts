@@ -23,6 +23,7 @@ import analyticsExtendedRouter from "./analytics-extended";
 import platformRouter from "./platform";
 import googleCalendarRouter from "./google-calendar";
 import intakeFormsRouter from "./intake-forms";
+import aiPhase2Router from "./ai-phase2";
 
 const router: IRouter = Router();
 
@@ -50,5 +51,6 @@ router.use(analyticsExtendedRouter);
 router.use(platformRouter);
 router.use(googleCalendarRouter);
 router.use(intakeFormsRouter);
+router.use(aiPhase2Router);
 
 export default router;
