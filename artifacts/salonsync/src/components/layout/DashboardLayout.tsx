@@ -7,6 +7,7 @@ import { Loader2, Bell, ChevronRight, Menu } from "lucide-react";
 import { AiReceptionist } from "../chat/AiReceptionist";
 import { useListNotifications } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+import { useBranding } from "@/contexts/BrandingContext";
 
 const ROUTE_META: Record<string, { title: string; crumb?: string }> = {
   "/admin/dashboard":    { title: "Dashboard",    crumb: "Admin" },
@@ -34,7 +35,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const { data: notifications } = useListNotifications({ userId: user?.id });
   const unreadCount = notifications?.filter((n: { isRead: boolean }) => !n.isRead).length ?? 0;
 
-  const meta = ROUTE_META[location] ?? { title: "SalonSync" };
+  const branding = useBranding();
+  const meta = ROUTE_META[location] ?? { title: branding.name };
 
   if (isLoading) {
     return (
@@ -45,7 +47,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="absolute -inset-3 bg-primary/10 rounded-3xl blur-xl animate-pulse" />
         </div>
-        <p className="text-white/40 text-sm font-medium">Loading SalonSync…</p>
+        <p className="text-white/40 text-sm font-medium">Loading…</p>
       </div>
     );
   }

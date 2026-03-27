@@ -39,6 +39,7 @@ import { SetupAdmin } from "@/pages/SetupAdmin";
 import { SetupPlatform } from "@/pages/SetupPlatform";
 import { DevSwitcher } from "@/components/DevSwitcher";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
+import { BrandingProvider } from "@/contexts/BrandingContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -99,9 +100,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-        <ImpersonationBanner />
-        <Router />
-        <DevSwitcher />
+        <BrandingProvider>
+          <ImpersonationBanner />
+          <Router />
+          <DevSwitcher />
+        </BrandingProvider>
       </WouterRouter>
       <Toaster theme="dark" position="bottom-right" richColors />
     </QueryClientProvider>

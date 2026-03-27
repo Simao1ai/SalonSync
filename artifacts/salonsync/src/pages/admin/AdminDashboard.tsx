@@ -8,10 +8,13 @@ import { useAuth } from "@workspace/replit-auth-web";
 import { format } from "date-fns";
 import { TrendingUp, Users, CalendarX, CalendarClock, DollarSign, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useBranding } from "@/contexts/BrandingContext";
+import { AnnouncementsBanner } from "@/components/AnnouncementsBanner";
 
 export function AdminDashboard() {
   const { user } = useAuth();
   const locationId = user?.locationId ?? "da62c8fa-580b-44c9-bed8-e19938402d39";
+  const branding = useBranding();
   
   const { data: analytics, isLoading: analyticsLoading } = useGetAnalytics({ locationId });
   const { data: appointments, isLoading: appointmentsLoading } = useListAppointments({ locationId });
@@ -37,9 +40,11 @@ export function AdminDashboard() {
 
   return (
     <DashboardLayout>
+      <AnnouncementsBanner />
+
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-display font-bold">Location Overview</h1>
+          <h1 className="text-3xl font-display font-bold">{branding.name}</h1>
           <p className="text-muted-foreground mt-1">Here's what's happening at your salon today.</p>
         </div>
         <div className="flex gap-3">

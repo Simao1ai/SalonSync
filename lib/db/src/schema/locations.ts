@@ -28,6 +28,10 @@ export const locationsTable = pgTable("locations", {
   highValueCancelFeePercent: doublePrecision("high_value_cancel_fee_percent").default(100),
   basePlatformFee: doublePrecision("base_platform_fee").default(20),
   perSeatFee: doublePrecision("per_seat_fee").default(10),
+  brandName: varchar("brand_name", { length: 255 }),
+  logoUrl: varchar("logo_url", { length: 500 }),
+  primaryColor: varchar("primary_color", { length: 20 }),
+  tagline: varchar("tagline", { length: 500 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

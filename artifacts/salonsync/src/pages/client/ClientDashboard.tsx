@@ -9,6 +9,7 @@ import { Calendar, CreditCard, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import { PaymentHistory } from "@/components/payments/PaymentHistory";
 import { TipPrompt } from "@/components/tips/TipPrompt";
+import { AnnouncementsBanner } from "@/components/AnnouncementsBanner";
 
 export function ClientDashboard() {
   const { user } = useAuth();
@@ -28,6 +29,7 @@ export function ClientDashboard() {
 
   return (
     <DashboardLayout>
+      <AnnouncementsBanner />
       <div className="bg-gradient-to-r from-primary/20 to-transparent rounded-3xl p-8 mb-10 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
         <div className="absolute right-0 top-0 w-64 h-64 bg-primary/20 blur-[100px] pointer-events-none" />
         <div className="relative z-10">

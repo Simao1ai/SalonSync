@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useListLocations } from "@workspace/api-client-react";
-import { Settings, MapPin, Clock, CreditCard, Bell, Shield, Save } from "lucide-react";
+import { Settings, MapPin, Clock, CreditCard, Bell, Shield, Save, Palette } from "lucide-react";
 import { toast } from "sonner";
+import { useBranding } from "@/contexts/BrandingContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@workspace/replit-auth-web";
 
 const TABS = [
   { id: "general", label: "General", icon: Settings },
+  { id: "branding", label: "Branding", icon: Palette },
   { id: "hours", label: "Business Hours", icon: Clock },
   { id: "payments", label: "Payments & Fees", icon: CreditCard },
   { id: "notifications", label: "Notifications", icon: Bell },
@@ -36,7 +40,13 @@ function InputField({ label, value, onChange, type = "text", hint }: { label: st
 export function AdminSettings() {
   const [tab, setTab] = useState<Tab>("general");
   const { data: locations } = useListLocations();
-  const location = locations?.[0];
+  const { user } = useAuth();
+  const branding = useBranding();
+  const queryClient = useQueryClient();
+
+  const location = user?.locationId
+    ? locations?.find((l: any) => l.id === user.locationId)
+    : locations?.[0];
 
   const [name, setName] = useState(location?.name ?? "SalonSync Downtown");
   const [phone, setPhone] = useState(location?.phone ?? "+1 (555) 123-4567");
@@ -45,8 +55,45 @@ export function AdminSettings() {
   const [depositPct, setDepositPct] = useState("50");
   const [cancelHours, setCancelHours] = useState("24");
 
+  const [brandName, setBrandName] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("");
+  const [tagline, setTagline] = useState("");
+  const [brandingSaving, setBrandingSaving] = useState(false);
+
+  useEffect(() => {
+    if (location) {
+      setBrandName((location as any).brandName || location.name || "");
+      setLogoUrl((location as any).logoUrl || "");
+      setPrimaryColor((location as any).primaryColor || "");
+      setTagline((location as any).tagline || "");
+    }
+  }, [location]);
+
   function handleSave() {
     toast.success("Settings saved successfully");
+  }
+
+  async function handleSaveBranding() {
+    if (!location) return;
+    setBrandingSaving(true);
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const sid = sessionStorage.getItem("__salonsync_dev_sid__");
+      if (sid) headers["Authorization"] = `Bearer ${sid}`;
+      const r = await fetch(`/api/locations/${location.id}/branding`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ brandName, logoUrl, primaryColor, tagline }),
+      });
+      if (!r.ok) throw new Error("Failed to save branding");
+      queryClient.invalidateQueries({ queryKey: ["/api/locations"] });
+      toast.success("Branding updated! Your salon's identity has been saved.");
+    } catch {
+      toast.error("Failed to save branding settings");
+    } finally {
+      setBrandingSaving(false);
+    }
   }
 
   return (
@@ -85,6 +132,81 @@ export function AdminSettings() {
                 <InputField label="Address" value={address} onChange={setAddress} />
                 <div className="pt-2">
                   <Button onClick={handleSave} className="gap-2"><Save className="w-4 h-4" /> Save General Info</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {tab === "branding" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Palette className="w-5 h-5 text-primary" />White Label Branding</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <p className="text-sm text-muted-foreground">Customize how your salon appears to staff and clients. Your brand name replaces the platform name throughout the app.</p>
+                <InputField
+                  label="Brand Name"
+                  value={brandName}
+                  onChange={setBrandName}
+                  hint="This is the name displayed in the sidebar, dashboard, and client-facing pages"
+                />
+                <InputField
+                  label="Logo URL"
+                  value={logoUrl}
+                  onChange={setLogoUrl}
+                  hint="URL to your salon logo (recommended: square image, 200x200px or larger)"
+                />
+                <InputField
+                  label="Tagline"
+                  value={tagline}
+                  onChange={setTagline}
+                  hint="A short tagline shown on your salon's public profile"
+                />
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-white/80">Brand Color</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={primaryColor || "#C9956A"}
+                      onChange={e => setPrimaryColor(e.target.value)}
+                      className="w-10 h-10 rounded-lg border border-white/10 cursor-pointer bg-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={primaryColor}
+                      onChange={e => setPrimaryColor(e.target.value)}
+                      placeholder="#C9956A"
+                      className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Accent color used across your salon's interface</p>
+                </div>
+
+                {brandName && (
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <p className="text-xs text-muted-foreground mb-3">Preview</p>
+                    <div className="flex items-center gap-3">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="Logo preview" className="w-10 h-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                          style={{ backgroundColor: primaryColor || "#C9956A" }}>
+                          {brandName.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-display text-lg font-bold text-white">{brandName}</p>
+                        {tagline && <p className="text-xs text-white/50">{tagline}</p>}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <Button onClick={handleSaveBranding} disabled={brandingSaving} className="gap-2">
+                    <Save className="w-4 h-4" />
+                    {brandingSaving ? "Saving..." : "Save Branding"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

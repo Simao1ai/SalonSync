@@ -183,13 +183,22 @@ Root `tsconfig.json` references all packages. API server depends on `@workspace/
   - `/platform/analytics` — aggregated charts, salon performance breakdown
   - `/platform/support` — high-risk alerts, cancellation monitoring
 - **User impersonation**: POST `/api/platform/impersonate/:userId` creates a session as target user with `impersonatorSid` backlink; POST `/api/platform/stop-impersonation` restores original super admin session. Amber banner shows "Viewing as [Name]" with "Stop Impersonation" button. Audit logged.
-- **Announcements**: DB table with type/targetRole; endpoints GET/POST/DELETE `/api/platform/announcements`
+- **Announcements**: DB table with type/targetRole; endpoints GET/POST/DELETE `/api/platform/announcements`; tenant-facing GET `/api/announcements` (filters by user role, shows global + role-targeted). AnnouncementsBanner component on admin/staff/client dashboards shows up to 3 latest announcements with dismiss-per-session.
 - **Subscriptions**: DB table linking locationId to plan (free/starter/professional/enterprise) with status and billing amount; GET/PATCH `/api/platform/subscriptions`
 - **Input validation**: All mutation endpoints validate input types, lengths, and enum values
 - **Audit logging**: Structured JSON logs for CREATE_TENANT, CREATE_ANNOUNCEMENT, IMPERSONATE_START, IMPERSONATE_STOP
+
+### White-Label Branding
+- **Location fields**: `brandName`, `logoUrl`, `primaryColor`, `tagline` on `locations` table
+- **PATCH `/api/locations/:id/branding`**: Admin-only (tenant-scoped — admins can only edit their own location), Super Admin can edit any
+- **BrandingContext** (`contexts/BrandingContext.tsx`): Provides `useBranding()` hook returning `{ name, logoUrl, primaryColor, tagline, locationId }`
+- **Sidebar**: Shows tenant's `brandName` (or `location.name` fallback) instead of "SalonSync"; logo rendered if `logoUrl` is set
+- **Admin Dashboard**: Heading shows tenant brand name
+- **Settings > Branding tab**: Admin can configure brand name, logo URL, tagline, and accent color with live preview
 
 ## Pending / Future Work
 
 - Stripe payment integration (UI built, connect Stripe account to activate)
 - Email notifications via Resend
 - Role-based route guards (currently uses `useAuth()` redirect on Landing)
+- White-label: apply `primaryColor` to CSS custom properties for full theme customization

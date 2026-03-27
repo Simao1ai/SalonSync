@@ -24,6 +24,7 @@ import {
 import { useAuth } from "@workspace/replit-auth-web";
 import { useListNotifications } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
+import { useBranding } from "@/contexts/BrandingContext";
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -35,6 +36,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const role = user?.role || "CLIENT";
   const [collapsed, setCollapsed] = useState(false);
+  const branding = useBranding();
 
   const { data: notifications } = useListNotifications({ userId: user?.id });
   const unreadCount = notifications?.filter((n: { isRead: boolean }) => !n.isRead).length ?? 0;
@@ -94,11 +96,15 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         (!mobile && collapsed) ? "justify-center" : "gap-2.5 justify-between"
       )}>
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(201,149,106,0.35)]">
-            <Sparkles className="w-4 h-4 text-white" />
-          </div>
+          {branding.logoUrl ? (
+            <img src={branding.logoUrl} alt={branding.name} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(201,149,106,0.35)]">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+          )}
           {(mobile || !collapsed) && (
-            <span className="font-display text-lg font-bold text-white tracking-wide truncate">SalonSync</span>
+            <span className="font-display text-lg font-bold text-white tracking-wide truncate">{branding.name}</span>
           )}
         </div>
         {/* Mobile close button */}

@@ -5,6 +5,7 @@ import { useAuth } from "@workspace/replit-auth-web";
 import { useListAppointments } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Clock, Star, Users, AlertTriangle } from "lucide-react";
+import { AnnouncementsBanner } from "@/components/AnnouncementsBanner";
 
 export function StaffDashboard() {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ export function StaffDashboard() {
 
   return (
     <DashboardLayout>
+      <AnnouncementsBanner />
       <div className="mb-8">
         <h1 className="text-3xl font-display font-bold">Hello, {user?.firstName}</h1>
         <p className="text-muted-foreground mt-1">Here is your schedule for today.</p>
