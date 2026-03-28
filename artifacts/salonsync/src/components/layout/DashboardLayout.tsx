@@ -3,11 +3,13 @@ import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { useAuth } from "@workspace/replit-auth-web";
 import { Redirect, useLocation } from "wouter";
-import { Loader2, Bell, ChevronRight, Menu } from "lucide-react";
+import { Loader2, Bell, ChevronRight, Menu, Sparkles } from "lucide-react";
 import { AiReceptionist } from "../chat/AiReceptionist";
 import { useListNotifications } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useBranding } from "@/contexts/BrandingContext";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 const ROUTE_META: Record<string, { title: string; crumb?: string }> = {
   "/admin/dashboard":    { title: "Dashboard",    crumb: "Admin" },
@@ -34,6 +36,17 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: notifications } = useListNotifications({ userId: user?.id });
   const unreadCount = notifications?.filter((n: { isRead: boolean }) => !n.isRead).length ?? 0;
+
+  const { data: trialStatus } = useQuery({
+    queryKey: ["trial-status"],
+    queryFn: async () => {
+      const r = await fetch("/api/onboarding/trial-status", { headers: getAuthHeaders() });
+      if (!r.ok) return null;
+      return r.json() as Promise<{ onTrial: boolean; daysRemaining: number | null; expired: boolean }>;
+    },
+    enabled: user?.role === "ADMIN",
+    staleTime: 5 * 60 * 1000,
+  });
 
   const branding = useBranding();
   const meta = ROUTE_META[location] ?? { title: branding.name };
@@ -107,6 +120,22 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
+
+        {trialStatus?.onTrial && (
+          <div className={`px-4 md:px-6 py-2.5 flex items-center justify-center gap-2 text-sm font-medium shrink-0 ${
+            trialStatus.expired
+              ? "bg-red-500/15 text-red-400 border-b border-red-500/20"
+              : (trialStatus.daysRemaining ?? 0) <= 2
+                ? "bg-yellow-500/15 text-yellow-400 border-b border-yellow-500/20"
+                : "bg-primary/10 text-primary border-b border-primary/20"
+          }`}>
+            <Sparkles className="w-4 h-4" />
+            {trialStatus.expired
+              ? "Your free trial has expired. Upgrade to continue using SalonSync."
+              : `Free trial: ${trialStatus.daysRemaining} day${trialStatus.daysRemaining === 1 ? "" : "s"} remaining`
+            }
+          </div>
+        )}
 
         {/* Scrollable content */}
         <main className="flex-1 overflow-y-auto relative">

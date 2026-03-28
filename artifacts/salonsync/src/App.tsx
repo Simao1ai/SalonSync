@@ -42,6 +42,7 @@ import { PlatformAnalytics } from "@/pages/platform/PlatformAnalytics";
 import { PlatformAnnouncements } from "@/pages/platform/PlatformAnnouncements";
 import { PlatformSupport } from "@/pages/platform/PlatformSupport";
 
+import { Onboarding } from "@/pages/Onboarding";
 import { SetupAdmin } from "@/pages/SetupAdmin";
 import { SetupPlatform } from "@/pages/SetupPlatform";
 import { DevSwitcher } from "@/components/DevSwitcher";
@@ -61,6 +62,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/onboarding" component={Onboarding} />
       <Route path="/explore" component={Explore} />
       <Route path="/explore/:id" component={SalonDetail} />
 

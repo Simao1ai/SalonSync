@@ -70,12 +70,12 @@ export function Landing() {
           >
             Sign in
           </button>
-          <button
-            onClick={() => login()}
+          <Link
+            href="/onboarding"
             className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all shadow-[0_0_20px_rgba(201,149,106,0.25)] hover:shadow-[0_0_28px_rgba(201,149,106,0.4)] hover:-translate-y-0.5"
           >
             Get Started <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          </Link>
         </div>
       </nav>
 

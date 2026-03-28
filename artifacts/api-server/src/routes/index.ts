@@ -28,6 +28,7 @@ import socialBookingRouter from "./social-booking";
 import reserveRouter from "./reserve";
 import webhooksRouter from "./webhooks";
 import storeRouter from "./store";
+import onboardingRouter from "./onboarding";
 
 const router: IRouter = Router();
 
@@ -60,5 +61,6 @@ router.use(socialBookingRouter);
 router.use(reserveRouter);
 router.use(webhooksRouter);
 router.use(storeRouter);
+router.use(onboardingRouter);
 
 export default router;
