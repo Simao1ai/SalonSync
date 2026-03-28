@@ -102,6 +102,14 @@ router.patch("/locations/:id/branding", async (req, res) => {
 });
 
 router.post("/locations", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (req.user!.role !== "SUPER_ADMIN") {
+    res.status(403).json({ error: "Only super admins can create locations" });
+    return;
+  }
   const body = CreateLocationBody.parse(req.body);
   const [location] = await db.insert(locationsTable).values(body).returning();
   res.status(201).json(location);
@@ -120,7 +128,22 @@ router.get("/locations/:id", async (req, res) => {
 });
 
 router.put("/locations/:id", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (req.user!.role !== "ADMIN" && req.user!.role !== "SUPER_ADMIN") {
+    res.status(403).json({ error: "Only admins can update locations" });
+    return;
+  }
+  if (req.user!.role === "ADMIN" && req.user!.locationId !== req.params.id) {
+    res.status(403).json({ error: "You can only update your own location" });
+    return;
+  }
   const body = UpdateLocationBody.parse(req.body);
+  if (req.user!.role !== "SUPER_ADMIN") {
+    delete (body as any).isActive;
+  }
   const [updated] = await db
     .update(locationsTable)
     .set({ ...body, updatedAt: new Date() })
@@ -134,6 +157,14 @@ router.put("/locations/:id", async (req, res) => {
 });
 
 router.delete("/locations/:id", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (req.user!.role !== "SUPER_ADMIN") {
+    res.status(403).json({ error: "Only super admins can deactivate locations" });
+    return;
+  }
   await db
     .update(locationsTable)
     .set({ isActive: false, updatedAt: new Date() })

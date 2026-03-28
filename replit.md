@@ -26,6 +26,7 @@ Key architectural decisions include:
 - **AI Superpowers (Phase 2):** AI Schedule Optimizer, AI Marketing Campaign Generator, AI Business Insights (NL→SQL), AI Churn Prediction, AI Smart Pricing — all implemented with security hardening.
 - **Marketplace & Growth (Phase 3):** Enhanced public marketplace with geolocation search, salon detail pages, gallery carousels, staff profiles, verified reviews with sentiment badges, JSON-LD structured data. Social media booking link generator with click/booking tracking. Google Reserve availability/service feeds.
 - **Polish & Differentiation (Phase 5):** PWA support (manifest, service worker, push notifications, Add to Home Screen). Multi-language i18n (English/Spanish via react-i18next, language selector in sidebar). Webhook/Zapier integration (CRUD API, HMAC-signed payloads, event firing on appointments/reviews/payments, SSRF-safe URL validation). E-commerce product store (admin product CRUD with categories/SKU/inventory, client storefront with cart/checkout/order history, stock tracking). 31 DB tables total.
+- **Security Hardening:** Rate limiting via express-rate-limit (100 req/min API, 20 req/min auth, 30 req/min AI). Role-based access control on locations (SUPER_ADMIN create/delete, ADMIN update own), services (ADMIN/SUPER_ADMIN CRUD, location-scoped), and users (location-scoped reads, privilege-escalation prevention on role/locationId/isActive fields). GET /users/:id requires auth with RBAC.
 
 ## External Dependencies
 

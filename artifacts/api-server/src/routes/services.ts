@@ -33,7 +33,15 @@ router.post("/services", async (req, res) => {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+  if (req.user!.role !== "ADMIN" && req.user!.role !== "SUPER_ADMIN") {
+    res.status(403).json({ error: "Only admins can create services" });
+    return;
+  }
   const body = CreateServiceBody.parse(req.body);
+  if (req.user!.role === "ADMIN" && body.locationId && body.locationId !== req.user!.locationId) {
+    res.status(403).json({ error: "You can only create services for your own location" });
+    return;
+  }
   const [service] = await db.insert(servicesTable).values(body).returning();
   res.status(201).json(service);
 });
@@ -55,6 +63,17 @@ router.put("/services/:id", async (req, res) => {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+  if (req.user!.role !== "ADMIN" && req.user!.role !== "SUPER_ADMIN") {
+    res.status(403).json({ error: "Only admins can update services" });
+    return;
+  }
+  if (req.user!.role === "ADMIN") {
+    const [existing] = await db.select().from(servicesTable).where(eq(servicesTable.id, req.params.id));
+    if (existing && existing.locationId !== req.user!.locationId) {
+      res.status(403).json({ error: "You can only update services for your own location" });
+      return;
+    }
+  }
   const body = UpdateServiceBody.parse(req.body);
   const [updated] = await db
     .update(servicesTable)
@@ -72,6 +91,17 @@ router.delete("/services/:id", async (req, res) => {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Unauthorized" });
     return;
+  }
+  if (req.user!.role !== "ADMIN" && req.user!.role !== "SUPER_ADMIN") {
+    res.status(403).json({ error: "Only admins can delete services" });
+    return;
+  }
+  if (req.user!.role === "ADMIN") {
+    const [existing] = await db.select().from(servicesTable).where(eq(servicesTable.id, req.params.id));
+    if (existing && existing.locationId !== req.user!.locationId) {
+      res.status(403).json({ error: "You can only delete services for your own location" });
+      return;
+    }
   }
   await db
     .update(servicesTable)
