@@ -45,7 +45,7 @@ function AddServiceDialog({ onCreated }: { onCreated: () => void }) {
         setName(""); setDescription(""); setBasePrice(""); setDurationMinutes(""); setCategory("STANDARD"); setDepositPercent("");
         onCreated();
       },
-      onError: (err: any) => toast.error(err?.message || "Failed to create service"),
+      onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to create service"),
     });
   }
 
@@ -82,7 +82,7 @@ function AddServiceDialog({ onCreated }: { onCreated: () => void }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-white/50 mb-1.5 block">Category</label>
-              <select value={category} onChange={e => setCategory(e.target.value as any)} className={inputCls}>
+              <select value={category} onChange={e => setCategory(e.target.value === "HIGH_VALUE" ? "HIGH_VALUE" : "STANDARD")} className={inputCls}>
                 <option value="STANDARD">Standard</option>
                 <option value="HIGH_VALUE">High Value</option>
               </select>

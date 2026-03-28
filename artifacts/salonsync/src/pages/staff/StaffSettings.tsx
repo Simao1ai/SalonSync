@@ -35,7 +35,7 @@ export function StaffSettings() {
         throw new Error("Failed to get authorization URL");
       }
     },
-    onError: (err: any) => toast.error(err.message || "Google Calendar is not configured. Please contact your administrator."),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Google Calendar is not configured. Please contact your administrator."),
   });
 
   const disconnectMutation = useMutation({

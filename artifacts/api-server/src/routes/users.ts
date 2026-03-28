@@ -37,8 +37,9 @@ router.post("/users", async (req, res) => {
       specialties: specialties || [],
     }).returning();
     res.status(201).json(user);
-  } catch (err: any) {
-    if (err.code === "23505") {
+  } catch (err: unknown) {
+    const pgErr = err as { code?: string };
+    if (pgErr.code === "23505") {
       res.status(409).json({ error: "A user with this email already exists" });
       return;
     }

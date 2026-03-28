@@ -9,15 +9,9 @@ import { useListUsers, useListReviews, useListAppointments } from "@workspace/ap
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Star, UserPlus, Calendar, TrendingUp, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 const LOCATION_ID = "da62c8fa-580b-44c9-bed8-e19938402d39";
-
-function getHeaders() {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const sid = sessionStorage.getItem("__salonsync_dev_sid__");
-  if (sid) headers["Authorization"] = `Bearer ${sid}`;
-  return headers;
-}
 
 function AddStaffDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
@@ -31,7 +25,7 @@ function AddStaffDialog({ onCreated }: { onCreated: () => void }) {
     mutationFn: async () => {
       const res = await fetch("/api/users", {
         method: "POST",
-        headers: getHeaders(),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           firstName, lastName, email,
           phone: phone || undefined,
@@ -49,7 +43,7 @@ function AddStaffDialog({ onCreated }: { onCreated: () => void }) {
       setFirstName(""); setLastName(""); setEmail(""); setPhone(""); setSpecialties("");
       onCreated();
     },
-    onError: (err: any) => toast.error(err.message || "Failed to add staff member"),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to add staff member"),
   });
 
   const inputCls = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50";
