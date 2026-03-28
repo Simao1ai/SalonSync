@@ -104,12 +104,12 @@ export function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={() => login()}
+            <Link
+              href="/onboarding"
               className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white font-semibold px-8 py-3.5 rounded-full transition-all shadow-[0_0_24px_rgba(201,149,106,0.3)] hover:shadow-[0_0_36px_rgba(201,149,106,0.45)] hover:-translate-y-0.5 text-sm"
             >
               Start for free <ArrowRight className="w-4 h-4" />
-            </button>
+            </Link>
             <Link
               href="/explore"
               className="flex items-center justify-center gap-2 text-white/70 hover:text-white border border-white/10 hover:border-primary/40 hover:bg-primary/5 font-medium px-8 py-3.5 rounded-full transition-all text-sm"
@@ -286,12 +286,12 @@ export function Landing() {
             </div>
             <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">Ready to transform your salon?</h2>
             <p className="text-white/40 max-w-lg mx-auto mb-8">Join thousands of salon owners using SalonSync to save time, reduce no-shows, and grow revenue.</p>
-            <button
-              onClick={() => login()}
+            <Link
+              href="/onboarding"
               className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-semibold px-10 py-4 rounded-full transition-all shadow-[0_0_32px_rgba(201,149,106,0.35)] hover:shadow-[0_0_48px_rgba(201,149,106,0.5)] hover:-translate-y-0.5 text-sm"
             >
               Get started for free <ArrowRight className="w-4 h-4" />
-            </button>
+            </Link>
           </div>
         </motion.div>
       </section>
