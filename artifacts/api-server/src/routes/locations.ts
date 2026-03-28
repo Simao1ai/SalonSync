@@ -141,12 +141,26 @@ router.put("/locations/:id", async (req, res) => {
     return;
   }
   const body = UpdateLocationBody.parse(req.body);
-  if (req.user!.role !== "SUPER_ADMIN") {
-    delete (body as any).isActive;
+
+  const safeFields: Record<string, unknown> = {};
+  if (body.name !== undefined) safeFields.name = body.name;
+  if (body.address !== undefined) safeFields.address = body.address;
+  if (body.city !== undefined) safeFields.city = body.city;
+  if (body.state !== undefined) safeFields.state = body.state;
+  if (body.zip !== undefined) safeFields.zip = body.zip;
+  if (body.phone !== undefined) safeFields.phone = body.phone;
+  if (body.email !== undefined) safeFields.email = body.email;
+  if (body.timezone !== undefined) safeFields.timezone = body.timezone;
+  if (body.cancellationWindowHours !== undefined) safeFields.cancellationWindowHours = body.cancellationWindowHours;
+  if (body.standardCancelFeePercent !== undefined) safeFields.standardCancelFeePercent = body.standardCancelFeePercent;
+  if (body.highValueCancelFeePercent !== undefined) safeFields.highValueCancelFeePercent = body.highValueCancelFeePercent;
+  if (req.user!.role === "SUPER_ADMIN" && body.isActive !== undefined) {
+    safeFields.isActive = body.isActive;
   }
+
   const [updated] = await db
     .update(locationsTable)
-    .set({ ...body, updatedAt: new Date() })
+    .set({ ...safeFields, updatedAt: new Date() })
     .where(eq(locationsTable.id, req.params.id))
     .returning();
   if (!updated) {

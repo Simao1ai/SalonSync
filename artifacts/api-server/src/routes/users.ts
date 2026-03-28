@@ -95,14 +95,19 @@ router.put("/users/:id", async (req, res) => {
 
   const body = UpdateUserBody.parse(req.body);
 
-  if (currentUser.role !== "SUPER_ADMIN") {
-    delete (body as any).role;
-    delete (body as any).locationId;
-    delete (body as any).isActive;
+  const safeFields: Record<string, unknown> = {};
+  if (body.phone !== undefined) safeFields.phone = body.phone;
+  if (body.bio !== undefined) safeFields.bio = body.bio;
+  if (body.specialties !== undefined) safeFields.specialties = body.specialties;
+  if (currentUser.role === "SUPER_ADMIN") {
+    if (body.role !== undefined) safeFields.role = body.role;
+    if (body.locationId !== undefined) safeFields.locationId = body.locationId;
+    if (body.isActive !== undefined) safeFields.isActive = body.isActive;
   }
+
   const [updated] = await db
     .update(usersTable)
-    .set({ ...body, updatedAt: new Date() })
+    .set({ ...safeFields, updatedAt: new Date() })
     .where(eq(usersTable.id, req.params.id))
     .returning();
   if (!updated) {
