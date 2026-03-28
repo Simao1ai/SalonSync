@@ -7,12 +7,27 @@ import { UpdateUserBody, ListUsersQueryParams } from "@workspace/api-zod";
 const router: IRouter = Router();
 
 router.get("/users", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
   const query = ListUsersQueryParams.safeParse(req.query);
   const filters = [];
 
   if (query.success) {
     if (query.data.role) filters.push(eq(usersTable.role, query.data.role as "ADMIN" | "STAFF" | "CLIENT"));
     if (query.data.locationId) filters.push(eq(usersTable.locationId as unknown as string, query.data.locationId));
+  }
+
+  // ADMIN and STAFF can only see users at their own location
+  if (req.user!.role === "ADMIN" || req.user!.role === "STAFF") {
+    if (req.user!.locationId) {
+      filters.push(eq(usersTable.locationId as unknown as string, req.user!.locationId));
+    }
+  }
+  // CLIENT can only see themselves
+  if (req.user!.role === "CLIENT") {
+    filters.push(eq(usersTable.id, req.user!.id));
   }
 
   const users = await db
@@ -40,11 +55,39 @@ router.put("/users/:id", async (req, res) => {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+  const targetId = req.params.id;
+  const currentUser = req.user!;
+
+  // Users can only edit themselves, unless they're ADMIN (own location) or SUPER_ADMIN (any)
+  if (currentUser.role === "CLIENT" || currentUser.role === "STAFF") {
+    if (currentUser.id !== targetId) {
+      res.status(403).json({ error: "You can only update your own profile" });
+      return;
+    }
+  }
+  if (currentUser.role === "ADMIN") {
+    // ADMIN can edit themselves or users at their location
+    if (currentUser.id !== targetId) {
+      const [targetUser] = await db.select().from(usersTable).where(eq(usersTable.id, targetId));
+      if (!targetUser || targetUser.locationId !== currentUser.locationId) {
+        res.status(403).json({ error: "You can only update users at your own location" });
+        return;
+      }
+    }
+  }
+
   const body = UpdateUserBody.parse(req.body);
+
+  // Prevent non-SUPER_ADMIN from escalating roles
+  if (body.role && currentUser.role !== "SUPER_ADMIN") {
+    res.status(403).json({ error: "Only super admins can change user roles" });
+    return;
+  }
+
   const [updated] = await db
     .update(usersTable)
     .set({ ...body, updatedAt: new Date() })
-    .where(eq(usersTable.id, req.params.id))
+    .where(eq(usersTable.id, targetId))
     .returning();
   if (!updated) {
     res.status(404).json({ error: "User not found" });
