@@ -4,6 +4,17 @@ import { usersTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { UpdateUserBody, ListUsersQueryParams } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
+import { z } from "zod";
+
+const CreateUserBody = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  role: z.enum(["STAFF", "CLIENT", "ADMIN"]).optional(),
+  locationId: z.string().uuid().optional(),
+  specialties: z.array(z.string()).optional(),
+});
 
 const router: IRouter = Router();
 
@@ -17,11 +28,12 @@ router.post("/users", async (req, res) => {
     return;
   }
   try {
-    const { firstName, lastName, email, phone, role, locationId, specialties } = req.body;
-    if (!firstName || !lastName || !email) {
-      res.status(400).json({ error: "First name, last name, and email are required" });
+    const parsed = CreateUserBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues.map(i => i.message).join(", ") });
       return;
     }
+    const { firstName, lastName, email, phone, role, locationId, specialties } = parsed.data;
     const allowedRoles = ["STAFF", "CLIENT"];
     if (req.user!.role === "SUPER_ADMIN") allowedRoles.push("ADMIN");
     const assignedRole = (role && allowedRoles.includes(role)) ? role : "STAFF";
