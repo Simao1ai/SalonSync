@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Link } from "wouter";
 import { useListUsers, useListReviews, useListAppointments } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Star, UserPlus, Calendar, TrendingUp, Clock } from "lucide-react";
+import { Star, UserPlus, Calendar, TrendingUp, Clock, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { getAuthHeaders } from "@/lib/auth-headers";
 
@@ -82,6 +82,100 @@ function AddStaffDialog({ onCreated }: { onCreated: () => void }) {
           </div>
           <Button type="submit" className="w-full" disabled={mutation.isPending}>
             {mutation.isPending ? "Adding..." : "Add Staff Member"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface StaffMember {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  phone: string | null;
+  specialties: string[] | null;
+}
+
+function EditStaffDialog({ member, onUpdated }: { member: StaffMember; onUpdated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [firstName, setFirstName] = useState(member.firstName ?? "");
+  const [lastName, setLastName] = useState(member.lastName ?? "");
+  const [email, setEmail] = useState(member.email ?? "");
+  const [phone, setPhone] = useState(member.phone ?? "");
+  const [specialties, setSpecialties] = useState(
+    Array.isArray(member.specialties) ? member.specialties.join(", ") : ""
+  );
+
+  function resetForm() {
+    setFirstName(member.firstName ?? "");
+    setLastName(member.lastName ?? "");
+    setEmail(member.email ?? "");
+    setPhone(member.phone ?? "");
+    setSpecialties(Array.isArray(member.specialties) ? member.specialties.join(", ") : "");
+  }
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/users/${member.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
+          firstName, lastName, email,
+          phone: phone || undefined,
+          specialties: specialties ? specialties.split(",").map(s => s.trim()) : [],
+        }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Staff member updated");
+      setOpen(false);
+      onUpdated();
+    },
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to update"),
+  });
+
+  const inputCls = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50";
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) resetForm(); }}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="flex-1 text-xs gap-1">
+          <Pencil className="w-3 h-3" /> Edit
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="bg-[#0F1829] border-white/10 text-white max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-display">Edit Staff Member</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={e => { e.preventDefault(); mutation.mutate(); }} className="space-y-4 mt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">First Name</label>
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} className={inputCls} required />
+            </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Last Name</label>
+              <input value={lastName} onChange={e => setLastName(e.target.value)} className={inputCls} required />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputCls} required />
+          </div>
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">Phone</label>
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">Specialties</label>
+            <input value={specialties} onChange={e => setSpecialties(e.target.value)} className={inputCls} placeholder="Color, Balayage, Extensions (comma-separated)" />
+          </div>
+          <Button type="submit" className="w-full" disabled={mutation.isPending}>
+            {mutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </form>
       </DialogContent>
@@ -179,7 +273,7 @@ export function AdminStaff() {
                     <Link href={`/admin/schedule?staffId=${member.id}`} className="flex-1">
                       <Button variant="outline" size="sm" className="w-full text-xs">View Schedule</Button>
                     </Link>
-                    <Button variant="ghost" size="sm" className="flex-1 text-xs">Edit</Button>
+                    <EditStaffDialog member={member as StaffMember} onUpdated={() => refetch()} />
                   </div>
                 </CardContent>
               </Card>

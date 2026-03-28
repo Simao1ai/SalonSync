@@ -147,28 +147,59 @@ router.put("/users/:id", async (req, res) => {
     }
   }
 
-  const body = UpdateUserBody.parse(req.body);
+  const ExtendedUpdateBody = z.object({
+    phone: z.string().optional(),
+    bio: z.string().optional(),
+    specialties: z.array(z.string()).optional(),
+    firstName: z.string().min(1).optional(),
+    lastName: z.string().min(1).optional(),
+    email: z.string().email().optional(),
+    role: z.enum(["ADMIN", "STAFF", "CLIENT", "SUPER_ADMIN"]).optional(),
+    locationId: z.string().uuid().optional(),
+    isActive: z.boolean().optional(),
+  });
+
+  const parsed = ExtendedUpdateBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+    return;
+  }
+  const body = parsed.data;
 
   const safeFields: Record<string, unknown> = {};
   if (body.phone !== undefined) safeFields.phone = body.phone;
   if (body.bio !== undefined) safeFields.bio = body.bio;
   if (body.specialties !== undefined) safeFields.specialties = body.specialties;
+  if (currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN") {
+    if (body.firstName !== undefined) safeFields.firstName = body.firstName;
+    if (body.lastName !== undefined) safeFields.lastName = body.lastName;
+    if (body.email !== undefined) safeFields.email = body.email;
+  }
   if (currentUser.role === "SUPER_ADMIN") {
     if (body.role !== undefined) safeFields.role = body.role;
     if (body.locationId !== undefined) safeFields.locationId = body.locationId;
     if (body.isActive !== undefined) safeFields.isActive = body.isActive;
   }
 
-  const [updated] = await db
-    .update(usersTable)
-    .set({ ...safeFields, updatedAt: new Date() })
-    .where(eq(usersTable.id, req.params.id))
-    .returning();
-  if (!updated) {
-    res.status(404).json({ error: "User not found" });
-    return;
+  try {
+    const [updated] = await db
+      .update(usersTable)
+      .set({ ...safeFields, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.params.id))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    res.json(updated);
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("unique")) {
+      res.status(409).json({ error: "A user with this email already exists" });
+      return;
+    }
+    console.error("Update user error:", err);
+    res.status(500).json({ error: "Failed to update user" });
   }
-  res.json(updated);
 });
 
 export default router;
