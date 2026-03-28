@@ -2,16 +2,108 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useListServices } from "@workspace/api-client-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useListServices, useCreateService } from "@workspace/api-client-react";
 import { formatCurrency } from "@/lib/utils";
 import { Scissors, Plus, Clock, DollarSign, Search, Zap } from "lucide-react";
 import { SmartPricingPanel } from "@/components/ai/SmartPricingPanel";
+import { toast } from "sonner";
 
 const LOCATION_ID = "da62c8fa-580b-44c9-bed8-e19938402d39";
 
+function AddServiceDialog({ onCreated }: { onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [basePrice, setBasePrice] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("");
+  const [category, setCategory] = useState<"STANDARD" | "HIGH_VALUE">("STANDARD");
+  const [depositPercent, setDepositPercent] = useState("");
+
+  const { mutate: create, isPending } = useCreateService();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name || !basePrice || !durationMinutes) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    create({
+      data: {
+        name,
+        description: description || undefined,
+        basePrice: parseFloat(basePrice),
+        durationMinutes: parseInt(durationMinutes),
+        category,
+        depositPercent: depositPercent ? parseFloat(depositPercent) : undefined,
+        locationId: LOCATION_ID,
+      }
+    }, {
+      onSuccess: () => {
+        toast.success("Service created");
+        setOpen(false);
+        setName(""); setDescription(""); setBasePrice(""); setDurationMinutes(""); setCategory("STANDARD"); setDepositPercent("");
+        onCreated();
+      },
+      onError: (err: any) => toast.error(err?.message || "Failed to create service"),
+    });
+  }
+
+  const inputCls = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50";
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2"><Plus className="w-4 h-4" /> Add Service</Button>
+      </DialogTrigger>
+      <DialogContent className="bg-[#0F1829] border-white/10 text-white max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-display">Add Service</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">Service Name *</label>
+            <input value={name} onChange={e => setName(e.target.value)} className={inputCls} placeholder="Balayage" required />
+          </div>
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} className={inputCls} placeholder="Optional description..." />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Price ($) *</label>
+              <input type="number" step="0.01" min="0" value={basePrice} onChange={e => setBasePrice(e.target.value)} className={inputCls} placeholder="150.00" required />
+            </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Duration (min) *</label>
+              <input type="number" min="5" step="5" value={durationMinutes} onChange={e => setDurationMinutes(e.target.value)} className={inputCls} placeholder="60" required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Category</label>
+              <select value={category} onChange={e => setCategory(e.target.value as any)} className={inputCls}>
+                <option value="STANDARD">Standard</option>
+                <option value="HIGH_VALUE">High Value</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Deposit %</label>
+              <input type="number" min="0" max="100" value={depositPercent} onChange={e => setDepositPercent(e.target.value)} className={inputCls} placeholder="0" />
+            </div>
+          </div>
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? "Creating..." : "Add Service"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function AdminServices() {
   const [search, setSearch] = useState("");
-  const { data: services, isLoading } = useListServices({ locationId: LOCATION_ID });
+  const { data: services, isLoading, refetch } = useListServices({ locationId: LOCATION_ID });
 
   const filtered = (services ?? []).filter(s =>
     !search || s.name.toLowerCase().includes(search.toLowerCase())
@@ -30,7 +122,7 @@ export function AdminServices() {
           <h1 className="text-3xl font-display font-bold">Services</h1>
           <p className="text-muted-foreground mt-1">Manage your service catalog and pricing</p>
         </div>
-        <Button className="gap-2"><Plus className="w-4 h-4" /> Add Service</Button>
+        <AddServiceDialog onCreated={() => refetch()} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">

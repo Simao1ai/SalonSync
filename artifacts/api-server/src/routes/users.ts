@@ -3,8 +3,49 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { UpdateUserBody, ListUsersQueryParams } from "@workspace/api-zod";
+import { randomUUID } from "crypto";
 
 const router: IRouter = Router();
+
+router.post("/users", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (req.user!.role !== "ADMIN" && req.user!.role !== "SUPER_ADMIN") {
+    res.status(403).json({ error: "Only admins can create staff members" });
+    return;
+  }
+  try {
+    const { firstName, lastName, email, phone, role, locationId, specialties } = req.body;
+    if (!firstName || !lastName || !email) {
+      res.status(400).json({ error: "First name, last name, and email are required" });
+      return;
+    }
+    const allowedRoles = ["STAFF", "CLIENT"];
+    if (req.user!.role === "SUPER_ADMIN") allowedRoles.push("ADMIN");
+    const assignedRole = (role && allowedRoles.includes(role)) ? role : "STAFF";
+    const assignedLocation = req.user!.role === "ADMIN" ? req.user!.locationId : (locationId || req.user!.locationId);
+    const [user] = await db.insert(usersTable).values({
+      id: randomUUID(),
+      firstName,
+      lastName,
+      email,
+      phone: phone || null,
+      role: assignedRole,
+      locationId: assignedLocation,
+      specialties: specialties || [],
+    }).returning();
+    res.status(201).json(user);
+  } catch (err: any) {
+    if (err.code === "23505") {
+      res.status(409).json({ error: "A user with this email already exists" });
+      return;
+    }
+    console.error("Create user error:", err);
+    res.status(500).json({ error: "Failed to create user" });
+  }
+});
 
 router.get("/users", async (req, res) => {
   if (!req.isAuthenticated()) {

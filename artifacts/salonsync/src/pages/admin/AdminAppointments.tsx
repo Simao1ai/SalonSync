@@ -3,7 +3,8 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useListAppointments, useCancelAppointment } from "@workspace/api-client-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useListAppointments, useListUsers, useListServices, useCreateAppointment, useCancelAppointment } from "@workspace/api-client-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { format } from "date-fns";
 import { Calendar, Search, Filter, AlertTriangle, CheckCircle2, XCircle, Clock } from "lucide-react";
@@ -33,6 +34,102 @@ function RiskBadge({ score }: { score?: string | null }) {
       <AlertTriangle className="w-3 h-3" />
       {score}
     </span>
+  );
+}
+
+function NewAppointmentDialog({ onCreated }: { onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [clientId, setClientId] = useState("");
+  const [staffId, setStaffId] = useState("");
+  const [serviceIds, setServiceIds] = useState<string[]>([]);
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const { data: clients } = useListUsers({ role: "CLIENT" });
+  const { data: staff } = useListUsers({ role: "STAFF" });
+  const { data: services } = useListServices({ locationId: LOCATION_ID });
+  const { mutate: create, isPending } = useCreateAppointment();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!clientId || !staffId || serviceIds.length === 0 || !date || !time) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    const startTime = new Date(`${date}T${time}`);
+    create({ data: { clientId, staffId, serviceIds, startTime, locationId: LOCATION_ID, notes: notes || undefined } }, {
+      onSuccess: () => {
+        toast.success("Appointment created");
+        setOpen(false);
+        setClientId(""); setStaffId(""); setServiceIds([]); setDate(""); setTime(""); setNotes("");
+        onCreated();
+      },
+      onError: (err: any) => toast.error(err?.message || "Failed to create appointment"),
+    });
+  }
+
+  function toggleService(id: string) {
+    setServiceIds(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
+  }
+
+  const inputCls = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50";
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2"><Calendar className="w-4 h-4" /> New Appointment</Button>
+      </DialogTrigger>
+      <DialogContent className="bg-[#0F1829] border-white/10 text-white max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-display">New Appointment</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">Client *</label>
+            <select value={clientId} onChange={e => setClientId(e.target.value)} className={inputCls}>
+              <option value="">Select client</option>
+              {(clients ?? []).map(c => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">Stylist *</label>
+            <select value={staffId} onChange={e => setStaffId(e.target.value)} className={inputCls}>
+              <option value="">Select stylist</option>
+              {(staff ?? []).map(s => <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">Services * (click to select)</label>
+            <div className="flex flex-wrap gap-2">
+              {(services ?? []).map(s => (
+                <button key={s.id} type="button" onClick={() => toggleService(s.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${serviceIds.includes(s.id) ? "bg-primary/20 text-primary border-primary/40" : "bg-white/5 text-white/40 border-white/10 hover:border-white/20"}`}>
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Date *</label>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Time *</label>
+              <input type="time" value={time} onChange={e => setTime(e.target.value)} className={inputCls} />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">Notes</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputCls} placeholder="Optional notes..." />
+          </div>
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? "Creating..." : "Create Appointment"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -75,7 +172,7 @@ export function AdminAppointments() {
           <h1 className="text-3xl font-display font-bold">Appointments</h1>
           <p className="text-muted-foreground mt-1">Manage all salon bookings</p>
         </div>
-        <Button className="gap-2"><Calendar className="w-4 h-4" /> New Appointment</Button>
+        <NewAppointmentDialog onCreated={() => refetch()} />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

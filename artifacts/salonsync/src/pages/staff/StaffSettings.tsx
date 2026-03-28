@@ -26,13 +26,16 @@ export function StaffSettings() {
     mutationFn: async () => {
       const r = await fetch("/api/google-calendar/connect", { headers: getAuthHeaders() });
       const data = await r.json();
+      if (!r.ok) {
+        throw new Error(data.error || "Google Calendar integration is not available");
+      }
       if (data.url) {
         window.open(data.url, "_blank", "width=500,height=600");
       } else {
-        throw new Error(data.error || "Failed to get auth URL");
+        throw new Error("Failed to get authorization URL");
       }
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => toast.error(err.message || "Google Calendar is not configured. Please contact your administrator."),
   });
 
   const disconnectMutation = useMutation({

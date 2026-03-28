@@ -207,7 +207,7 @@ export function ClientStore() {
                       <p className="text-white/40 text-xs">{new Date(o.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
-                      <span className="text-primary font-bold">${o.totalAmount.toFixed(2)}</span>
+                      <span className="text-primary font-bold">${Number(o.totalAmount || 0).toFixed(2)}</span>
                       <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
                         o.status === "delivered" ? "bg-green-500/15 text-green-400" :
                         o.status === "cancelled" ? "bg-red-500/15 text-red-400" :
@@ -220,7 +220,7 @@ export function ClientStore() {
                       {i.productImage && <img src={i.productImage} alt="" className="w-8 h-8 rounded object-cover" />}
                       <span className="flex-1">{i.productName}</span>
                       <span>x{i.quantity}</span>
-                      <span className="text-white/30">${(i.priceAtTime * i.quantity).toFixed(2)}</span>
+                      <span className="text-white/30">${(Number(i.priceAtTime || 0) * Number(i.quantity || 0)).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
