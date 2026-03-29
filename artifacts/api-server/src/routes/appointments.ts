@@ -9,8 +9,9 @@ import {
   notificationsTable,
   directMessageThreadsTable,
   waitlistTable,
+  availabilityTable,
 } from "@workspace/db/schema";
-import { eq, and, gte, lte, sql, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, lt, gt, sql, isNull, inArray, or } from "drizzle-orm";
 import { fireWebhooks } from "../services/webhook-dispatcher";
 import {
   CreateAppointmentBody,
@@ -104,6 +105,59 @@ router.post("/appointments", async (req, res) => {
 
   const startTime = new Date(body.startTime);
   const endTime = new Date(startTime.getTime() + totalDuration * 60 * 1000);
+
+  // Validate staff availability for the requested day/time
+  const dow = startTime.getDay();
+  const timeStr = `${String(startTime.getHours()).padStart(2, "0")}:${String(startTime.getMinutes()).padStart(2, "0")}`;
+  const endTimeStr = `${String(endTime.getHours()).padStart(2, "0")}:${String(endTime.getMinutes()).padStart(2, "0")}`;
+
+  const staffAvailability = await db.select()
+    .from(availabilityTable)
+    .where(and(
+      eq(availabilityTable.userId, body.staffId),
+      eq(availabilityTable.dayOfWeek, dow),
+      eq(availabilityTable.isBlocked, false),
+      lte(availabilityTable.startTime, timeStr),
+      gte(availabilityTable.endTime, endTimeStr),
+    ));
+
+  if (staffAvailability.length === 0) {
+    res.status(409).json({ error: "Staff member is not available at the requested time" });
+    return;
+  }
+
+  // Check for blocked dates (vacations, time off)
+  const dateStr = startTime.toISOString().slice(0, 10);
+  const blockedEntries = await db.select()
+    .from(availabilityTable)
+    .where(and(
+      eq(availabilityTable.userId, body.staffId),
+      eq(availabilityTable.isBlocked, true),
+    ));
+
+  const isBlocked = blockedEntries.some((b) =>
+    b.blockDate && new Date(b.blockDate).toISOString().slice(0, 10) === dateStr
+  );
+
+  if (isBlocked) {
+    res.status(409).json({ error: "Staff member is not available on this date" });
+    return;
+  }
+
+  // Check for overlapping appointments (both CONFIRMED and PENDING)
+  const conflicts = await db.select({ id: appointmentsTable.id })
+    .from(appointmentsTable)
+    .where(and(
+      eq(appointmentsTable.staffId, body.staffId),
+      lt(appointmentsTable.startTime, endTime),
+      gt(appointmentsTable.endTime, startTime),
+      inArray(appointmentsTable.status, ["CONFIRMED", "PENDING"]),
+    ));
+
+  if (conflicts.length > 0) {
+    res.status(409).json({ error: "This time slot conflicts with an existing appointment" });
+    return;
+  }
 
   const [appointment] = await db
     .insert(appointmentsTable)
